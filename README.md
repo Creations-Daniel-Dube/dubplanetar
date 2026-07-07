@@ -1,115 +1,117 @@
 # DubPlanetar
 
-**Empilement GPU Soleil / Lune** pour vidéos AVI RAW capturées avec un appareil **SeeStar** (S50, S30, S30 Pro).
+📖 **[Version française](README.fr.md)**
 
-DubPlanetar transforme une séquence vidéo brute en une image finale super-résolue au format TIFF 16 bits, optimisée pour révéler les détails du disque solaire ou lunaire.
+**GPU Sun / Moon stacking** for RAW AVI videos captured with a **SeeStar** device (S50, S30, S30 Pro).
+
+DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF image, optimized to reveal detail on the solar or lunar disk.
 
 ---
 
-## Table des matières
+## Table of contents
 
-- [Présentation](#présentation)
-- [Fonctionnalités](#fonctionnalités)
-- [Prérequis](#prérequis)
+- [Overview](#overview)
+- [Features](#features)
+- [Requirements](#requirements)
 - [Installation](#installation)
-- [Lancement](#lancement)
-- [Utilisation](#utilisation)
-- [Profils Soleil et Lune](#profils-soleil-et-lune)
-- [Paramètres détaillés](#paramètres-détaillés)
-- [Pipeline technique](#pipeline-technique)
-- [Format de sortie](#format-de-sortie)
-- [Langues supportées](#langues-supportées)
-- [Dépannage](#dépannage)
-- [Crédits](#crédits)
+- [Launching](#launching)
+- [Usage](#usage)
+- [Sun and Moon profiles](#sun-and-moon-profiles)
+- [Detailed settings](#detailed-settings)
+- [Technical pipeline](#technical-pipeline)
+- [Output format](#output-format)
+- [Supported languages](#supported-languages)
+- [Troubleshooting](#troubleshooting)
+- [Credits](#credits)
 
 ---
 
-## Présentation
+## Overview
 
-L'astrophotographie planétaire avec un SeeStar produit des vidéos AVI en format RAW (capteur Bayer non dématriçé). Chaque frame individuelle est bruitée et affectée par les turbulences atmosphériques. L'empilement (stacking) consiste à :
+Planetary astrophotography with a SeeStar produces AVI videos in RAW format (undebayered sensor data). Each individual frame is noisy and affected by atmospheric turbulence. Stacking consists of:
 
-1. Sélectionner les frames les plus nettes
-2. Les aligner avec une précision sous-pixel
-3. Les combiner pour améliorer le rapport signal/bruit
-4. Appliquer un traitement d'image adapté à la cible (Soleil ou Lune)
+1. Selecting the sharpest frames
+2. Aligning them with sub-pixel precision
+3. Combining them to improve the signal-to-noise ratio
+4. Applying image processing tailored to the target (Sun or Moon)
 
-DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec une interface graphique intuitive.
+DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intuitive graphical interface.
 
-**Résultat :** un fichier `*_stacked.tiff` recadré sur le disque, en super-résolution (×3 par défaut), prêt pour le post-traitement ou l'affichage.
-
----
-
-## Fonctionnalités
-
-- Interface graphique **PySide6** (Qt) avec aperçu du résultat
-- Traitement **100 % GPU** (CuPy / CUDA) — score de netteté, alignement, empilement, debayer
-- Profils prédéfinis **Soleil** et **Lune** avec réglages optimisés
-- Détection automatique du motif Bayer (BGGR, GRBG, GBRG, RGGB)
-- Recadrage automatique sur le disque avec marge réglable
-- Super-résolution par **drizzle** (facteur ×3)
-- Traitement tonal avancé : gamma, solar stretch, aplatissement du centre, netteté multi-échelle
-- Interface multilingue : **français, anglais, espagnol, allemand**
-- Sauvegarde automatique des préférences par profil
+**Result:** a `*_stacked.tiff` file cropped on the disk, super-resolved (×3 by default), ready for post-processing or display.
 
 ---
 
-## Prérequis
+## Features
 
-| Composant | Exigence |
-|-----------|----------|
-| Système | Windows 10 ou 11 (64 bits) |
-| GPU | NVIDIA avec support CUDA 12.x (testé sur RTX 3060 12 Go) |
-| Pilotes | Pilotes NVIDIA récents avec CUDA 12 |
-| Python | 3.11 ou supérieur |
-| Appareil | SeeStar S50, S30 ou S30 Pro |
-| Format source | Fichiers AVI RAW (non compressés, capteur Bayer) |
+- **PySide6** (Qt) graphical interface with result preview
+- **100 % GPU** processing (CuPy / CUDA) — sharpness scoring, alignment, stacking, debayering
+- Preset **Sun** and **Moon** profiles with optimized settings
+- Automatic Bayer pattern detection (BGGR, GRBG, GBRG, RGGB)
+- Automatic disk cropping with adjustable margin
+- Super-resolution via **drizzle** (×3 factor)
+- Advanced tonal processing: gamma, solar stretch, center flattening, multi-scale sharpening
+- Multilingual interface: **French, English, Spanish, German**
+- Automatic per-profile preference saving
 
-> **Note CUDA :** le projet utilise `cupy-cuda12x`. Si vous avez CUDA 11, installez plutôt `cupy-cuda11x` dans `requirements.txt`.
+---
+
+## Requirements
+
+| Component | Requirement |
+|-----------|-------------|
+| OS | Windows 10 or 11 (64-bit) |
+| GPU | NVIDIA with CUDA 12.x support (tested on RTX 3060 12 GB) |
+| Drivers | Recent NVIDIA drivers with CUDA 12 |
+| Python | 3.11 or later |
+| Device | SeeStar S50, S30, or S30 Pro |
+| Source format | RAW AVI files (uncompressed, Bayer sensor) |
+
+> **CUDA note:** the project uses `cupy-cuda12x`. If you have CUDA 11, install `cupy-cuda11x` in `requirements.txt` instead.
 
 ---
 
 ## Installation
 
-### 1. Cloner le dépôt
+### 1. Clone the repository
 
 ```powershell
 git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
 cd dubplanetar
 ```
 
-### 2. Créer un environnement virtuel Python
+### 2. Create a Python virtual environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Installer les dépendances
+### 3. Install dependencies
 
 ```powershell
 pip install -r requirements.txt
 pip install -e .
 ```
 
-### 4. Compiler les traductions (si les fichiers `.qm` sont absents)
+### 4. Compile translations (if `.qm` files are missing)
 
 ```powershell
 python scripts\compile_translations.py
 ```
 
-> Les fichiers `.qm` compilés sont inclus dans le dépôt ; cette étape n'est nécessaire que si vous modifiez les fichiers de traduction `.ts`.
+> Compiled `.qm` files are included in the repository; this step is only needed if you modify the `.ts` translation files.
 
-### 5. Vérifier CUDA
+### 5. Verify CUDA
 
 ```powershell
 python -c "import cupy as cp; d=cp.cuda.Device(0); d.use(); print(cp.cuda.runtime.getDeviceProperties(0)['name'])"
 ```
 
-Si cette commande affiche le nom de votre GPU, l'installation est réussie.
+If this command prints your GPU name, the installation was successful.
 
 ---
 
-## Lancement
+## Launching
 
 ### Via Python
 
@@ -117,13 +119,13 @@ Si cette commande affiche le nom de votre GPU, l'installation est réussie.
 python -m dub_planetar
 ```
 
-### Via le script PowerShell (sans console)
+### Via the PowerShell script (no console)
 
 ```powershell
 .\launch-dubplanetar.ps1
 ```
 
-### Via la commande installée
+### Via the installed command
 
 ```powershell
 dubplanetar
@@ -131,173 +133,172 @@ dubplanetar
 
 ---
 
-## Utilisation
+## Usage
 
-1. **Lancer** DubPlanetar
-2. **Choisir la cible** : ☀ Soleil ou ☾ Lune (charge le profil correspondant)
-3. **Sélectionner** un fichier AVI RAW SeeStar via *Parcourir…*
-4. **Ajuster** les paramètres si nécessaire (les valeurs par défaut du profil conviennent dans la plupart des cas)
-5. Cliquer sur **Empiler**
-6. Suivre la progression dans la barre et l'aperçu à droite
-7. Le fichier `*_stacked.tiff` est créé **à côté de la vidéo source**
-
----
-
-## Profils Soleil et Lune
-
-Les profils préconfigurent les paramètres pour chaque cible. Vos réglages sont sauvegardés séparément par profil.
-
-| Paramètre | Profil Soleil | Profil Lune |
-|-----------|---------------|-------------|
-| Frames conservées | 50 % | 50 % |
-| Balance des blancs | Désactivée | Activée |
-| Aplatir le centre | 70 % | Désactivé |
-| Debayer | Activé | Activé |
-| Recadrage auto | Activé | Activé |
-| Drizzle ×3 | Activé | Activé |
+1. **Launch** DubPlanetar
+2. **Choose the target**: ☀ Sun or ☾ Moon (loads the corresponding profile)
+3. **Select** a SeeStar RAW AVI file via *Browse…*
+4. **Adjust** settings if needed (profile defaults work in most cases)
+5. Click **Stack**
+6. Follow progress in the bar and preview on the right
+7. The `*_stacked.tiff` file is created **next to the source video**
 
 ---
 
-## Paramètres détaillés
+## Sun and Moon profiles
 
-### Sélection des frames
+Profiles preconfigure settings for each target. Your settings are saved separately per profile.
 
-- **Frames conservées** : pourcentage des frames les plus nettes à garder (10–100 %). Moins = plus net, mais moins de signal.
-- **Limite de frames** : nombre maximum de frames à lire (0 = toutes).
-
-### Traitement RAW
-
-- **Debayer** : convertit le capteur Bayer en couleur. Désactiver pour un empilement monochrome.
-- **Motif Bayer** : `AUTO` (recommandé), ou forcer BGGR / GRBG / GBRG / RGGB.
-- **Balance des blancs auto** : corrige le voile vert typique des capteurs SeeStar.
-
-### Recadrage et super-résolution
-
-- **Recadrage auto** : détecte le disque et recadre automatiquement.
-- **Marge autour du disque** : espace supplémentaire autour du disque détecté (1–30 %).
-- **Drizzle ×3** : empilement super-résolu (résolution finale ×3 en largeur et hauteur).
-
-### Traitement tonal
-
-- **Aplatir le centre** : réduit la surexposition au centre du Soleil (0 = désactivé).
-- **Gamma** : révèle les détails sombres (> 1.0 éclaircit les ombres).
-- **Netteté multi-échelle** : renforcement par ondelettes (0 = désactivé).
-- **Compression Soleil (asinh)** : étirement adaptatif pour le disque solaire (0 = désactivé).
-- **Fond du ciel → noir** : soustraction automatique du fond.
-- **Point noir** : seuil bas pour le noir (en %).
-- **Protéger les hautes lumières** : évite de brûler le centre du disque.
+| Setting | Sun profile | Moon profile |
+|---------|-------------|--------------|
+| Frames kept | 50 % | 50 % |
+| White balance | Disabled | Enabled |
+| Flatten center | 70 % | Disabled |
+| Debayer | Enabled | Enabled |
+| Auto crop | Enabled | Enabled |
+| Drizzle ×3 | Enabled | Enabled |
 
 ---
 
-## Pipeline technique
+## Detailed settings
 
-Le traitement s'exécute entièrement sur GPU :
+### Frame selection
+
+- **Frames kept**: percentage of the sharpest frames to retain (10–100 %). Lower = sharper, but less signal.
+- **Frame limit**: maximum number of frames to read (0 = all).
+
+### RAW processing
+
+- **Debayer**: converts the Bayer sensor to color. Disable for monochrome stacking.
+- **Bayer pattern**: `AUTO` (recommended), or force BGGR / GRBG / GBRG / RGGB.
+- **Auto white balance**: corrects the green cast typical of SeeStar sensors.
+
+### Cropping and super-resolution
+
+- **Auto crop**: detects the disk and crops automatically.
+- **Disk margin**: extra space around the detected disk (1–30 %).
+- **Drizzle ×3**: super-resolved stacking (final resolution ×3 in width and height).
+
+### Tonal processing
+
+- **Flatten center**: reduces overexposure at the center of the Sun (0 = disabled).
+- **Gamma**: reveals dark details (> 1.0 brightens shadows).
+- **Multi-scale sharpening**: wavelet enhancement (0 = disabled).
+- **Sun compression (asinh)**: adaptive stretch for the solar disk (0 = disabled).
+- **Sky background → black**: automatic background subtraction.
+- **Black point**: low threshold for black (in %).
+- **Protect highlights**: prevents burning the center of the disk.
+
+---
+
+## Technical pipeline
+
+Processing runs entirely on the GPU:
 
 ```
-Vidéo AVI RAW
+RAW AVI video
     │
     ▼
-1. Lecture des frames (OpenCV)
+1. Frame reading (OpenCV)
     │
     ▼
-2. Transfert GPU + score de netteté (variance du Laplacien)
+2. GPU transfer + sharpness score (Laplacian variance)
     │
     ▼
-3. Sélection des meilleures frames
+3. Best frame selection
     │
     ▼
-4. Alignement sous-pixel (corrélation de phase, cuFFT)
+4. Sub-pixel alignment (phase correlation, cuFFT)
     │
     ▼
-5. Recadrage automatique sur le disque (Soleil/Lune)
+5. Automatic disk cropping (Sun/Moon)
     │
     ▼
-6. Debayer BGGR dense (interpolation bilinéaire)
+6. Dense BGGR debayer (bilinear interpolation)
     │
     ▼
-7. Empilement super-résolu (shift-and-add sous-pixel, drizzle ×3)
+7. Super-resolved stacking (sub-pixel shift-and-add, drizzle ×3)
     │
     ▼
-8. Balance des blancs + normalisation → TIFF 16 bits
+8. White balance + normalization → 16-bit TIFF
 ```
 
 ---
 
-## Format de sortie
+## Output format
 
-- **Fichier** : `<nom_video>_stacked.tiff` (même dossier que la source)
-- **Profondeur** : 16 bits par canal
-- **Canaux** : RGB (debayer activé) ou monochrome
-- **Résolution** : environ ×3 la taille du disque recadré (avec drizzle activé)
-- **Espace colorimétrique** : linéaire, normalisé avec gamma appliqué
-
----
-
-## Langues supportées
-
-L'interface s'adapte automatiquement à la langue du système :
-
-| Code | Langue |
-|------|--------|
-| `fr` | Français |
-| `en` | Anglais |
-| `es` | Espagnol |
-| `de` | Allemand |
-
-Pour modifier les traductions, éditez les fichiers `.ts` dans `src/dub_planetar/translations/`, puis recompilez avec `python scripts/compile_translations.py`.
+- **File**: `<video_name>_stacked.tiff` (same folder as the source)
+- **Bit depth**: 16 bits per channel
+- **Channels**: RGB (debayer enabled) or monochrome
+- **Resolution**: approximately ×3 the cropped disk size (with drizzle enabled)
+- **Color space**: linear, normalized with gamma applied
 
 ---
 
-## Dépannage
+## Supported languages
 
-### « GPU indisponible » au démarrage
+The interface adapts automatically to the system language:
 
-- Vérifiez que vous avez une carte NVIDIA avec pilotes à jour
-- Installez CUDA 12.x ou adaptez `requirements.txt` à votre version CUDA
-- Testez : `python -c "import cupy; print(cupy.cuda.runtime.getDeviceCount())"`
+| Code | Language |
+|------|----------|
+| `fr` | French |
+| `en` | English |
+| `es` | Spanish |
+| `de` | German |
 
-### Erreur à l'import de CuPy
+To modify translations, edit the `.ts` files in `src/dub_planetar/translations/`, then recompile with `python scripts/compile_translations.py`.
 
-Assurez-vous que la variante CuPy correspond à votre CUDA :
+---
+
+## Troubleshooting
+
+### "GPU unavailable" at startup
+
+- Verify you have an NVIDIA card with up-to-date drivers
+- Install CUDA 12.x or adapt `requirements.txt` to your CUDA version
+- Test: `python -c "import cupy; print(cupy.cuda.runtime.getDeviceCount())"`
+
+### CuPy import error
+
+Make sure the CuPy variant matches your CUDA:
 
 ```powershell
-# CUDA 12.x (par défaut)
+# CUDA 12.x (default)
 pip install cupy-cuda12x[ctk]
 
 # CUDA 11.x
 pip install cupy-cuda11x[ctk]
 ```
 
-### L'interface est en anglais malgré un système français
+### Interface is in English despite a French system
 
-Les fichiers `.qm` compilés sont peut-être absents. Exécutez :
+Compiled `.qm` files may be missing. Run:
 
 ```powershell
 python scripts\compile_translations.py
 ```
 
-### La vidéo ne s'ouvre pas
+### Video won't open
 
-- Vérifiez que le fichier est un AVI RAW SeeStar (non compressé)
-- Essayez de limiter le nombre de frames pour tester sur un extrait
+- Verify the file is an uncompressed SeeStar RAW AVI
+- Try limiting the number of frames to test on a short clip
 
-### Résultat trop sombre ou trop clair
+### Result too dark or too bright
 
-- Ajustez le **gamma** (1.2 par défaut)
-- Pour le Soleil, activez **Aplatir le centre** (70 % dans le profil Soleil)
-- Vérifiez le **point noir** et la protection des hautes lumières
+- Adjust **gamma** (1.2 by default)
+- For the Sun, enable **Flatten center** (70 % in the Sun profile)
+- Check **black point** and highlight protection
 
 ---
 
-## Crédits
+## Credits
 
 **DubPlanetar** — Créations Daniel Dubé
 
-Logiciel d'empilement GPU pour astrophotographie planétaire SeeStar.
+GPU stacking software for SeeStar planetary astrophotography.
 
 ---
 
-## Licence
+## License
 
-Tous droits réservés © Créations Daniel Dubé.
-# dubplanetar
+All rights reserved © Créations Daniel Dubé.
