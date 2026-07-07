@@ -11,7 +11,7 @@ import numpy as np
 import time
 
 from PySide6.QtCore import Qt, QSettings, QThread, QTimer
-from PySide6.QtGui import QIcon, QImage, QPixmap
+from PySide6.QtGui import QIcon, QImage, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -32,7 +32,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from dub_planetar.i18n import PipelineError, install_translator, tr_args, tr_pipeline
+from dub_planetar.i18n import (
+    DEFAULT_LOCALE,
+    PipelineError,
+    get_current_locale,
+    install_translator,
+    next_locale,
+    set_locale,
+    tr_args,
+    tr_pipeline,
+)
 from dub_planetar.pipeline.stacker import StackResult, StackSettings, check_cuda_available
 from dub_planetar.worker import StackWorker
 
@@ -145,6 +154,8 @@ class MainWindow(QMainWindow):
         self._elapsed_timer.timeout.connect(self._update_elapsed)
         self._gpu_status_key, self._gpu_status_args = check_cuda_available()
         self._form_labels: dict[str, QLabel] = {}
+        self._last_stage_key: str | None = None
+        self._current_locale = DEFAULT_LOCALE
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -315,6 +326,13 @@ class MainWindow(QMainWindow):
         self._retranslate_ui()
         QTimer.singleShot(0, self._sync_panel_heights)
 
+        app = QApplication.instance()
+        if app is not None:
+            self._current_locale = get_current_locale(app)
+
+        language_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+        language_shortcut.activated.connect(self._cycle_display_language)
+
         self._connect_settings_persistence()
         self._restore_ui_settings()
 
@@ -380,9 +398,29 @@ class MainWindow(QMainWindow):
 
         self.stack_btn.setText(self.tr("Empiler"))
         self.preview.setText(self.tr("Aperçu du résultat"))
+        self._refresh_status_label()
         if self._start_time is None:
-            self.status_label.setText(self.tr("Prêt."))
             self.time_label.setText("")
+
+    def _refresh_status_label(self) -> None:
+        if self._start_time is not None:
+            if self._last_stage_key:
+                self.status_label.setText(tr_pipeline(self._last_stage_key))
+            else:
+                self.status_label.setText(self.tr("Traitement en cours…"))
+            return
+        if not self.status_label.text():
+            self.status_label.setText(self.tr("Prêt."))
+
+    def _cycle_display_language(self) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        self._current_locale = next_locale(self._current_locale)
+        set_locale(app, self._current_locale)
+        self._retranslate_ui()
+        if self._start_time is not None:
+            self._update_elapsed()
 
     @staticmethod
     def _set_combo_text(combo: QComboBox, data: str, text: str) -> None:
@@ -695,6 +733,7 @@ class MainWindow(QMainWindow):
 
         self.stack_btn.setEnabled(False)
         self.progress.setValue(0)
+        self._last_stage_key = None
         self.status_label.setText(self.tr("Traitement en cours…"))
 
         self._start_time = time.monotonic()
@@ -741,11 +780,13 @@ class MainWindow(QMainWindow):
         return elapsed
 
     def _on_progress(self, stage: str, value: float) -> None:
+        self._last_stage_key = stage
         self.progress.setValue(int(value * 100))
         self.status_label.setText(tr_pipeline(stage))
 
     def _on_finished(self, result: StackResult) -> None:
         elapsed = self._stop_timer()
+        self._last_stage_key = None
         self.stack_btn.setEnabled(True)
         bayer_info = (
             tr_args(self.tr(", Bayer %1"), result.bayer_pattern)
@@ -773,6 +814,7 @@ class MainWindow(QMainWindow):
 
     def _on_failed(self, error: object) -> None:
         elapsed = self._stop_timer()
+        self._last_stage_key = None
         self.stack_btn.setEnabled(True)
         self.status_label.setText(self.tr("Erreur"))
         self.time_label.setText(

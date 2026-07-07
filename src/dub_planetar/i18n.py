@@ -35,22 +35,51 @@ def _translations_dir() -> Path:
     return Path(resources.files("dub_planetar")) / "translations"
 
 
-def install_translator(app: QApplication) -> str:
+def _load_translator(language: str) -> QTranslator | None:
     translations_dir = _translations_dir()
-    translator = QTranslator(app)
+    translator = QTranslator()
+    qm_name = f"dub_planetar_{language}.qm"
+    if translator.load(qm_name, str(translations_dir)):
+        return translator
+    return None
 
-    for language in _language_candidates():
-        if language not in SUPPORTED_LOCALES:
-            continue
-        qm_name = f"dub_planetar_{language}.qm"
-        if translator.load(qm_name, str(translations_dir)):
-            app.installTranslator(translator)
-            return language
 
-    fallback = DEFAULT_LOCALE
-    if translator.load(f"dub_planetar_{fallback}.qm", str(translations_dir)):
+def set_locale(app: QApplication, language: str) -> str:
+    if language not in SUPPORTED_LOCALES:
+        language = DEFAULT_LOCALE
+
+    existing = getattr(app, "_dub_planetar_translator", None)
+    if existing is not None:
+        app.removeTranslator(existing)
+
+    translator = _load_translator(language)
+    if translator is None:
+        language = DEFAULT_LOCALE
+        translator = _load_translator(language)
+    if translator is not None:
         app.installTranslator(translator)
-    return fallback
+        app._dub_planetar_translator = translator
+
+    app._dub_planetar_locale = language
+    return language
+
+
+def get_current_locale(app: QApplication) -> str:
+    return getattr(app, "_dub_planetar_locale", DEFAULT_LOCALE)
+
+
+def next_locale(current: str) -> str:
+    if current not in SUPPORTED_LOCALES:
+        return SUPPORTED_LOCALES[0]
+    index = SUPPORTED_LOCALES.index(current)
+    return SUPPORTED_LOCALES[(index + 1) % len(SUPPORTED_LOCALES)]
+
+
+def install_translator(app: QApplication) -> str:
+    for language in _language_candidates():
+        if language in SUPPORTED_LOCALES:
+            return set_locale(app, language)
+    return set_locale(app, DEFAULT_LOCALE)
 
 
 def tr_args(text: str, *args: object) -> str:
