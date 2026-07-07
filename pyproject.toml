@@ -1,0 +1,26 @@
+[project]
+name = "dubplanetar"
+version = "0.5.1"
+description = "Empilement GPU Soleil/Lune pour vidéos RAW SeeStar (S50, S30, S30 Pro)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.6",
+    "cupy-cuda12x[ctk]>=13.0",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9",
+    "tifffile>=2024.2",
+]
+
+[project.scripts]
+dubplanetar = "dub_planetar.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dub_planetar = ["translations/*.qm"]
