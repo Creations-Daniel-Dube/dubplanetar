@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-05    *
+#* Dernières Modifications -->   2026-07-07    *
 #***********************************************
 from __future__ import annotations
 
@@ -833,10 +833,10 @@ class MainWindow(QMainWindow):
         return QPixmap.fromImage(qimage.copy())
 
 
-def run_app() -> None:
+def run_app(existing_app: QApplication | None = None) -> None:
     QApplication.setOrganizationName(_SETTINGS_ORG)
     QApplication.setApplicationName(_SETTINGS_APP)
-    app = QApplication(sys.argv)
+    app = existing_app or QApplication(sys.argv)
     install_translator(app)
     if _APP_ICON.is_file():
         app.setWindowIcon(QIcon(str(_APP_ICON)))
