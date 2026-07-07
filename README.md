@@ -300,3 +300,4 @@ Logiciel d'empilement GPU pour astrophotographie planétaire SeeStar.
 ## Licence
 
 Tous droits réservés © Créations Daniel Dubé.
+# dubplanetar
