@@ -38,6 +38,8 @@ from dub_planetar.worker import StackWorker
 
 _SETTINGS_ORG = "DubPlanetar"
 _SETTINGS_APP = "dubplanetar"
+_LEGACY_SETTINGS_ORG = "DiscStacker"
+_LEGACY_SETTINGS_APP = "disc-stacker"
 _APP_ICON = Path(__file__).resolve().parent.parent.parent / "images" / "dubPlanetar.ico"
 
 _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
@@ -78,6 +80,51 @@ _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
         "protect_highlights": True,
     },
 }
+
+
+def _migrate_legacy_settings() -> None:
+    """Importe les profils Soleil/Lune sauvegardés sous Disc Stacker."""
+    settings = QSettings(_SETTINGS_ORG, _SETTINGS_APP)
+    if settings.value("ui/migrated_from_disc_stacker"):
+        return
+
+    legacy = QSettings(_LEGACY_SETTINGS_ORG, _LEGACY_SETTINGS_APP)
+    has_profiles = legacy.value("profiles/sun/keep_ratio") is not None
+    has_legacy_ui = legacy.value("ui/keep_ratio") is not None
+    if not has_profiles and not has_legacy_ui:
+        return
+
+    for target in _PROFILE_DEFAULTS:
+        profile_prefix = f"profiles/{target}/"
+        for key in _PROFILE_DEFAULTS[target]:
+            value = legacy.value(f"{profile_prefix}{key}")
+            if value is not None:
+                settings.setValue(f"{profile_prefix}{key}", value)
+
+        path_prefix = f"paths/{target}/"
+        for path_key in ("last_file", "last_dir"):
+            value = legacy.value(f"{path_prefix}{path_key}")
+            if value is not None:
+                settings.setValue(f"{path_prefix}{path_key}", value)
+
+    active = legacy.value("ui/active_target")
+    if active is not None:
+        settings.setValue("ui/active_target", active)
+
+    geometry = legacy.value("ui/geometry")
+    if geometry is not None:
+        settings.setValue("ui/geometry", geometry)
+
+    for path_key in ("last_file", "last_dir"):
+        value = legacy.value(f"paths/{path_key}")
+        if value is not None:
+            settings.setValue(f"paths/sun/{path_key}", value)
+
+    if settings.value("profiles/sun/keep_ratio") is None:
+        return
+
+    settings.setValue("ui/migrated_from_disc_stacker", True)
+    settings.sync()
 
 
 class MainWindow(QMainWindow):
@@ -539,6 +586,7 @@ class MainWindow(QMainWindow):
             self._switching_profile = False
 
     def _restore_ui_settings(self) -> None:
+        _migrate_legacy_settings()
         settings = self._settings()
         self._restoring_settings = True
 
