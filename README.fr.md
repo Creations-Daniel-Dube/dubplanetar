@@ -2,7 +2,7 @@
 
 📖 **[English version](README.md)**
 
-**Empilement GPU Soleil / Lune** pour vidéos AVI RAW capturées avec un appareil **SeeStar** (S50, S30, S30 Pro).
+**Empilement GPU (Nvidia CUDA) Soleil / Lune** pour vidéos AVI RAW capturées avec un appareil **SeeStar** (S50, S30, S30 Pro).
 
 DubPlanetar transforme une séquence vidéo brute en une image finale super-résolue au format TIFF 16 bits, optimisée pour révéler les détails du disque solaire ou lunaire.
 
