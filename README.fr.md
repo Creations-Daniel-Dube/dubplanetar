@@ -1,4 +1,4 @@
-# DubPlanetar
+# DubPlanetar (Nvidia CUDA)
 
 📖 **[English version](README.md)**
 
@@ -26,6 +26,8 @@ DubPlanetar transforme une séquence vidéo brute en une image finale super-rés
 
 ---
 
+
+
 ## Présentation
 
 L'astrophotographie planétaire avec un SeeStar produit des vidéos AVI en format RAW (capteur Bayer non dématriçé). Chaque frame individuelle est bruitée et affectée par les turbulences atmosphériques. L'empilement (stacking) consiste à :
@@ -41,6 +43,8 @@ DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec u
 
 ---
 
+
+
 ## Fonctionnalités
 
 - Interface graphique **PySide6** (Qt) avec aperçu du résultat
@@ -55,22 +59,30 @@ DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec u
 
 ---
 
+
+
 ## Prérequis
 
-| Composant | Exigence |
-|-----------|----------|
-| Système | Windows 10 ou 11 (64 bits) |
-| GPU | NVIDIA avec support CUDA 12.x (testé sur RTX 3060 12 Go) |
-| Pilotes | Pilotes NVIDIA récents avec CUDA 12 |
-| Python | 3.11 ou supérieur |
-| Appareil | SeeStar S50, S30 ou S30 Pro |
-| Format source | Fichiers AVI RAW (non compressés, capteur Bayer) |
+
+| Composant     | Exigence                                                 |
+| ------------- | -------------------------------------------------------- |
+| Système       | Windows 10 ou 11 (64 bits)                               |
+| GPU           | NVIDIA avec support CUDA 12.x (testé sur RTX 3060 12 Go) |
+| Pilotes       | Pilotes NVIDIA récents avec CUDA 12                      |
+| Python        | 3.11 ou supérieur                                        |
+| Appareil      | SeeStar S50, S30 ou S30 Pro                              |
+| Format source | Fichiers AVI RAW (non compressés, capteur Bayer)         |
+
 
 > **Note CUDA :** le projet utilise `cupy-cuda12x`. Si vous avez CUDA 11, installez plutôt `cupy-cuda11x` dans `requirements.txt`.
 
 ---
 
+
+
 ## Installation
+
+
 
 ### 1. Cloner le dépôt
 
@@ -79,12 +91,16 @@ git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
 cd dubplanetar
 ```
 
+
+
 ### 2. Créer un environnement virtuel Python
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
+
+
 
 ### 3. Installer les dépendances
 
@@ -93,6 +109,8 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+
+
 ### 4. Compiler les traductions (si les fichiers `.qm` sont absents)
 
 ```powershell
@@ -100,6 +118,8 @@ python scripts\compile_translations.py
 ```
 
 > Les fichiers `.qm` compilés sont inclus dans le dépôt ; cette étape n'est nécessaire que si vous modifiez les fichiers de traduction `.ts`.
+
+
 
 ### 5. Vérifier CUDA
 
@@ -111,7 +131,11 @@ Si cette commande affiche le nom de votre GPU, l'installation est réussie.
 
 ---
 
+
+
 ## Lancement
+
+
 
 ### Via Python
 
@@ -119,11 +143,15 @@ Si cette commande affiche le nom de votre GPU, l'installation est réussie.
 python -m dub_planetar
 ```
 
+
+
 ### Via le script PowerShell (sans console)
 
 ```powershell
 .\launch-dubplanetar.ps1
 ```
+
+
 
 ### Via la commande installée
 
@@ -132,6 +160,8 @@ dubplanetar
 ```
 
 ---
+
+
 
 ## Utilisation
 
@@ -145,27 +175,37 @@ dubplanetar
 
 ---
 
+
+
 ## Profils Soleil et Lune
 
 Les profils préconfigurent les paramètres pour chaque cible. Vos réglages sont sauvegardés séparément par profil.
 
-| Paramètre | Profil Soleil | Profil Lune |
-|-----------|---------------|-------------|
-| Frames conservées | 50 % | 50 % |
-| Balance des blancs | Désactivée | Activée |
-| Aplatir le centre | 70 % | Désactivé |
-| Debayer | Activé | Activé |
-| Recadrage auto | Activé | Activé |
-| Drizzle ×3 | Activé | Activé |
+
+| Paramètre          | Profil Soleil | Profil Lune |
+| ------------------ | ------------- | ----------- |
+| Frames conservées  | 50 %          | 50 %        |
+| Balance des blancs | Désactivée    | Activée     |
+| Aplatir le centre  | 70 %          | Désactivé   |
+| Debayer            | Activé        | Activé      |
+| Recadrage auto     | Activé        | Activé      |
+| Drizzle ×3         | Activé        | Activé      |
+
 
 ---
 
+
+
 ## Paramètres détaillés
+
+
 
 ### Sélection des frames
 
 - **Frames conservées** : pourcentage des frames les plus nettes à garder (10–100 %). Moins = plus net, mais moins de signal.
 - **Limite de frames** : nombre maximum de frames à lire (0 = toutes).
+
+
 
 ### Traitement RAW
 
@@ -173,11 +213,15 @@ Les profils préconfigurent les paramètres pour chaque cible. Vos réglages son
 - **Motif Bayer** : `AUTO` (recommandé), ou forcer BGGR / GRBG / GBRG / RGGB.
 - **Balance des blancs auto** : corrige le voile vert typique des capteurs SeeStar.
 
+
+
 ### Recadrage et super-résolution
 
 - **Recadrage auto** : détecte le disque et recadre automatiquement.
 - **Marge autour du disque** : espace supplémentaire autour du disque détecté (1–30 %).
 - **Drizzle ×3** : empilement super-résolu (résolution finale ×3 en largeur et hauteur).
+
+
 
 ### Traitement tonal
 
@@ -190,6 +234,8 @@ Les profils préconfigurent les paramètres pour chaque cible. Vos réglages son
 - **Protéger les hautes lumières** : évite de brûler le centre du disque.
 
 ---
+
+
 
 ## Pipeline technique
 
@@ -225,6 +271,8 @@ Vidéo AVI RAW
 
 ---
 
+
+
 ## Format de sortie
 
 - **Fichier** : `<nom_video>_stacked.tiff` (même dossier que la source)
@@ -235,28 +283,38 @@ Vidéo AVI RAW
 
 ---
 
+
+
 ## Langues supportées
 
 L'interface s'adapte automatiquement à la langue du système :
 
-| Code | Langue |
-|------|--------|
+
+| Code | Langue   |
+| ---- | -------- |
 | `fr` | Français |
-| `en` | Anglais |
+| `en` | Anglais  |
 | `es` | Espagnol |
 | `de` | Allemand |
+
 
 Pour modifier les traductions, éditez les fichiers `.ts` dans `src/dub_planetar/translations/`, puis recompilez avec `python scripts/compile_translations.py`.
 
 ---
 
+
+
 ## Dépannage
+
+
 
 ### « GPU indisponible » au démarrage
 
 - Vérifiez que vous avez une carte NVIDIA avec pilotes à jour
 - Installez CUDA 12.x ou adaptez `requirements.txt` à votre version CUDA
 - Testez : `python -c "import cupy; print(cupy.cuda.runtime.getDeviceCount())"`
+
+
 
 ### Erreur à l'import de CuPy
 
@@ -270,6 +328,8 @@ pip install cupy-cuda12x[ctk]
 pip install cupy-cuda11x[ctk]
 ```
 
+
+
 ### L'interface est en anglais malgré un système français
 
 Les fichiers `.qm` compilés sont peut-être absents. Exécutez :
@@ -278,10 +338,14 @@ Les fichiers `.qm` compilés sont peut-être absents. Exécutez :
 python scripts\compile_translations.py
 ```
 
+
+
 ### La vidéo ne s'ouvre pas
 
 - Vérifiez que le fichier est un AVI RAW SeeStar (non compressé)
 - Essayez de limiter le nombre de frames pour tester sur un extrait
+
+
 
 ### Résultat trop sombre ou trop clair
 
@@ -291,6 +355,8 @@ python scripts\compile_translations.py
 
 ---
 
+
+
 ## Crédits
 
 **DubPlanetar** — Créations Daniel Dubé
@@ -298,6 +364,8 @@ python scripts\compile_translations.py
 Logiciel d'empilement GPU pour astrophotographie planétaire SeeStar.
 
 ---
+
+
 
 ## Licence
 

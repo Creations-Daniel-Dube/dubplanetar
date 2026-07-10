@@ -1,4 +1,4 @@
-# DubPlanetar
+# DubPlanetar (Nvidia CUDA)
 
 📖 **[Version française](README.fr.md)**
 
@@ -26,6 +26,8 @@ DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF i
 
 ---
 
+
+
 ## Overview
 
 Planetary astrophotography with a SeeStar produces AVI videos in RAW format (undebayered sensor data). Each individual frame is noisy and affected by atmospheric turbulence. Stacking consists of:
@@ -41,6 +43,8 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 ---
 
+
+
 ## Features
 
 - **PySide6** (Qt) graphical interface with result preview
@@ -55,22 +59,30 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 ---
 
+
+
 ## Requirements
 
-| Component | Requirement |
-|-----------|-------------|
-| OS | Windows 10 or 11 (64-bit) |
-| GPU | NVIDIA with CUDA 12.x support (tested on RTX 3060 12 GB) |
-| Drivers | Recent NVIDIA drivers with CUDA 12 |
-| Python | 3.11 or later |
-| Device | SeeStar S50, S30, or S30 Pro |
-| Source format | RAW AVI files (uncompressed, Bayer sensor) |
+
+| Component     | Requirement                                              |
+| ------------- | -------------------------------------------------------- |
+| OS            | Windows 10 or 11 (64-bit)                                |
+| GPU           | NVIDIA with CUDA 12.x support (tested on RTX 3060 12 GB) |
+| Drivers       | Recent NVIDIA drivers with CUDA 12                       |
+| Python        | 3.11 or later                                            |
+| Device        | SeeStar S50, S30, or S30 Pro                             |
+| Source format | RAW AVI files (uncompressed, Bayer sensor)               |
+
 
 > **CUDA note:** the project uses `cupy-cuda12x`. If you have CUDA 11, install `cupy-cuda11x` in `requirements.txt` instead.
 
 ---
 
+
+
 ## Installation
+
+
 
 ### 1. Clone the repository
 
@@ -79,12 +91,16 @@ git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
 cd dubplanetar
 ```
 
+
+
 ### 2. Create a Python virtual environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
+
+
 
 ### 3. Install dependencies
 
@@ -93,6 +109,8 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+
+
 ### 4. Compile translations (if `.qm` files are missing)
 
 ```powershell
@@ -100,6 +118,8 @@ python scripts\compile_translations.py
 ```
 
 > Compiled `.qm` files are included in the repository; this step is only needed if you modify the `.ts` translation files.
+
+
 
 ### 5. Verify CUDA
 
@@ -111,7 +131,11 @@ If this command prints your GPU name, the installation was successful.
 
 ---
 
+
+
 ## Launching
+
+
 
 ### Via Python
 
@@ -119,11 +143,15 @@ If this command prints your GPU name, the installation was successful.
 python -m dub_planetar
 ```
 
+
+
 ### Via the PowerShell script (no console)
 
 ```powershell
 .\launch-dubplanetar.ps1
 ```
+
+
 
 ### Via the installed command
 
@@ -132,6 +160,8 @@ dubplanetar
 ```
 
 ---
+
+
 
 ## Usage
 
@@ -145,27 +175,37 @@ dubplanetar
 
 ---
 
+
+
 ## Sun and Moon profiles
 
 Profiles preconfigure settings for each target. Your settings are saved separately per profile.
 
-| Setting | Sun profile | Moon profile |
-|---------|-------------|--------------|
-| Frames kept | 50 % | 50 % |
-| White balance | Disabled | Enabled |
-| Flatten center | 70 % | Disabled |
-| Debayer | Enabled | Enabled |
-| Auto crop | Enabled | Enabled |
-| Drizzle ×3 | Enabled | Enabled |
+
+| Setting        | Sun profile | Moon profile |
+| -------------- | ----------- | ------------ |
+| Frames kept    | 50 %        | 50 %         |
+| White balance  | Disabled    | Enabled      |
+| Flatten center | 70 %        | Disabled     |
+| Debayer        | Enabled     | Enabled      |
+| Auto crop      | Enabled     | Enabled      |
+| Drizzle ×3     | Enabled     | Enabled      |
+
 
 ---
 
+
+
 ## Detailed settings
+
+
 
 ### Frame selection
 
 - **Frames kept**: percentage of the sharpest frames to retain (10–100 %). Lower = sharper, but less signal.
 - **Frame limit**: maximum number of frames to read (0 = all).
+
+
 
 ### RAW processing
 
@@ -173,11 +213,15 @@ Profiles preconfigure settings for each target. Your settings are saved separate
 - **Bayer pattern**: `AUTO` (recommended), or force BGGR / GRBG / GBRG / RGGB.
 - **Auto white balance**: corrects the green cast typical of SeeStar sensors.
 
+
+
 ### Cropping and super-resolution
 
 - **Auto crop**: detects the disk and crops automatically.
 - **Disk margin**: extra space around the detected disk (1–30 %).
 - **Drizzle ×3**: super-resolved stacking (final resolution ×3 in width and height).
+
+
 
 ### Tonal processing
 
@@ -190,6 +234,8 @@ Profiles preconfigure settings for each target. Your settings are saved separate
 - **Protect highlights**: prevents burning the center of the disk.
 
 ---
+
+
 
 ## Technical pipeline
 
@@ -225,6 +271,8 @@ RAW AVI video
 
 ---
 
+
+
 ## Output format
 
 - **File**: `<video_name>_stacked.tiff` (same folder as the source)
@@ -235,28 +283,38 @@ RAW AVI video
 
 ---
 
+
+
 ## Supported languages
 
 The interface adapts automatically to the system language:
 
+
 | Code | Language |
-|------|----------|
-| `fr` | French |
-| `en` | English |
-| `es` | Spanish |
-| `de` | German |
+| ---- | -------- |
+| `fr` | French   |
+| `en` | English  |
+| `es` | Spanish  |
+| `de` | German   |
+
 
 To modify translations, edit the `.ts` files in `src/dub_planetar/translations/`, then recompile with `python scripts/compile_translations.py`.
 
 ---
 
+
+
 ## Troubleshooting
+
+
 
 ### "GPU unavailable" at startup
 
 - Verify you have an NVIDIA card with up-to-date drivers
 - Install CUDA 12.x or adapt `requirements.txt` to your CUDA version
 - Test: `python -c "import cupy; print(cupy.cuda.runtime.getDeviceCount())"`
+
+
 
 ### CuPy import error
 
@@ -270,6 +328,8 @@ pip install cupy-cuda12x[ctk]
 pip install cupy-cuda11x[ctk]
 ```
 
+
+
 ### Interface is in English despite a French system
 
 Compiled `.qm` files may be missing. Run:
@@ -278,10 +338,14 @@ Compiled `.qm` files may be missing. Run:
 python scripts\compile_translations.py
 ```
 
+
+
 ### Video won't open
 
 - Verify the file is an uncompressed SeeStar RAW AVI
 - Try limiting the number of frames to test on a short clip
+
+
 
 ### Result too dark or too bright
 
@@ -291,6 +355,8 @@ python scripts\compile_translations.py
 
 ---
 
+
+
 ## Credits
 
 **DubPlanetar** — Créations Daniel Dubé
@@ -298,6 +364,8 @@ python scripts\compile_translations.py
 GPU stacking software for SeeStar planetary astrophotography.
 
 ---
+
+
 
 ## License
 
