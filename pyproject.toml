@@ -1,6 +1,6 @@
 [project]
 name = "dubplanetar"
-version = "0.5.1"
+version = "0.6.1"
 description = "Empilement GPU Soleil/Lune pour vidéos RAW SeeStar (S50, S30, S30 Pro)"
 readme = "README.md"
 requires-python = ">=3.11"
