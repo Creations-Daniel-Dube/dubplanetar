@@ -66,7 +66,7 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 | Component     | Requirement                                              |
 | ------------- | -------------------------------------------------------- |
-| OS            | Windows 10 or 11 (64-bit)                                |
+| OS            | Windows 10/11 or Ubuntu 22.04+ (64-bit)                  |
 | GPU           | NVIDIA with CUDA 12.x support (tested on RTX 3060 12 GB) |
 | Drivers       | Recent NVIDIA drivers with CUDA 12                       |
 | Python        | 3.11 or later                                            |
@@ -75,6 +75,8 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 
 > **CUDA note:** the project uses `cupy-cuda12x`. If you have CUDA 11, install `cupy-cuda11x` in `requirements.txt` instead.
+
+> **Virtual environment:** `.venv` is created **on the local machine** and is excluded from Git (never push it to GitHub). Do not copy a Windows `.venv` to Linux or the reverse — always recreate it on the target OS (`Scripts/` on Windows, `bin/` on Ubuntu).
 
 ---
 
@@ -86,44 +88,51 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 ### 1. Clone the repository
 
-```powershell
+```bash
 git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
 cd dubplanetar
 ```
 
 
 
-### 2. Create a Python virtual environment
+### 2. Run the installer (creates a native `.venv` for your OS)
+
+**Windows (PowerShell):**
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\install-dubplanetar.ps1
 ```
 
+**Ubuntu:**
 
-
-### 3. Install dependencies
-
-```powershell
-pip install -r requirements.txt
-pip install -e .
+```bash
+./install-dubplanetar.sh
 ```
 
+Or on either OS:
+
+```bash
+python install_dubplanetar.py    # Windows
+python3 install_dubplanetar.py   # Ubuntu
+```
+
+This creates `.venv`, installs dependencies, installs the project in editable mode, and checks CUDA.
 
 
-### 4. Compile translations (if `.qm` files are missing)
 
-```powershell
-python scripts\compile_translations.py
+### 3. Compile translations (if `.qm` files are missing)
+
+```bash
+python scripts/compile_translations.py
 ```
 
 > Compiled `.qm` files are included in the repository; this step is only needed if you modify the `.ts` translation files.
 
 
 
-### 5. Verify CUDA
+### 4. Verify CUDA
 
-```powershell
+```bash
 python -c "import cupy as cp; d=cp.cuda.Device(0); d.use(); print(cp.cuda.runtime.getDeviceProperties(0)['name'])"
 ```
 
@@ -137,25 +146,44 @@ If this command prints your GPU name, the installation was successful.
 
 
 
-### Via Python
+### Via the launch script (recommended — OS auto-detection)
+
+**Windows:**
 
 ```powershell
-python -m dub_planetar
+.\launch-dubplanetar.ps1
+```
+
+**Ubuntu:**
+
+```bash
+./launch-dubplanetar.sh
+```
+
+Or on either OS:
+
+```bash
+python launch_dubplanetar.py    # Windows
+python3 launch_dubplanetar.py   # Ubuntu
 ```
 
 
 
-### Via the PowerShell script (no console)
+### Via Python (with the venv activated or using the venv interpreter)
 
-```powershell
-.\launch-dubplanetar.ps1
+```bash
+# Windows
+.\.venv\Scripts\python.exe -m dub_planetar
+
+# Ubuntu
+.venv/bin/python -m dub_planetar
 ```
 
 
 
 ### Via the installed command
 
-```powershell
+```bash
 dubplanetar
 ```
 
@@ -320,7 +348,7 @@ To modify translations, edit the `.ts` files in `src/dub_planetar/translations/`
 
 Make sure the CuPy variant matches your CUDA:
 
-```powershell
+```bash
 # CUDA 12.x (default)
 pip install cupy-cuda12x[ctk]
 
@@ -334,8 +362,8 @@ pip install cupy-cuda11x[ctk]
 
 Compiled `.qm` files may be missing. Run:
 
-```powershell
-python scripts\compile_translations.py
+```bash
+python scripts/compile_translations.py
 ```
 
 
