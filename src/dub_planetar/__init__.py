@@ -4,4 +4,4 @@
 #***********************************************
 """DubPlanetar — empilement GPU Soleil/Lune pour vidéos RAW SeeStar."""
 
-__version__ = "0.6.1"
+__version__ = "0.6.75"

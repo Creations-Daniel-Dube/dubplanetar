@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from dub_planetar import __version__
 from dub_planetar.i18n import (
     DEFAULT_LOCALE,
     PipelineError,
@@ -342,7 +343,12 @@ class MainWindow(QMainWindow):
         return label
 
     def _retranslate_ui(self) -> None:
-        self.setWindowTitle(self.tr("DubPlanetar — Soleil / Lune (CUDA)"))
+        self.setWindowTitle(
+            tr_args(
+                self.tr("DubPlanetar — Soleil / Lune (CUDA) --- Version %1"),
+                __version__,
+            )
+        )
         self.gpu_label.setText(
             tr_args(
                 self.tr("GPU : %1"),
