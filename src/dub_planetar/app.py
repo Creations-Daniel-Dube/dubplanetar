@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from dub_planetar import __version__
 from dub_planetar.i18n import (
     DEFAULT_LOCALE,
     PipelineError,
@@ -53,10 +54,10 @@ _APP_ICON = Path(__file__).resolve().parent.parent.parent / "images" / "dubPlane
 
 _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
     "sun": {
-        "keep_ratio": 50.0,
+        "keep_ratio": 10.0,
         "max_frames": 0,
         "debayer": True,
-        "bayer_pattern": "AUTO",
+        "bayer_pattern": "BGRG",
         "white_balance": False,
         "auto_crop": True,
         "crop_margin": 5.0,
@@ -71,10 +72,10 @@ _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
         "protect_highlights": True,
     },
     "moon": {
-        "keep_ratio": 50.0,
+        "keep_ratio": 10.0,
         "max_frames": 0,
         "debayer": True,
-        "bayer_pattern": "AUTO",
+        "bayer_pattern": "BGRG",
         "white_balance": True,
         "auto_crop": True,
         "crop_margin": 5.0,
@@ -342,7 +343,12 @@ class MainWindow(QMainWindow):
         return label
 
     def _retranslate_ui(self) -> None:
-        self.setWindowTitle(self.tr("DubPlanetar — Soleil / Lune (CUDA)"))
+        self.setWindowTitle(
+            tr_args(
+                self.tr("DubPlanetar — Soleil / Lune (CUDA) --- Version %1"),
+                __version__,
+            )
+        )
         self.gpu_label.setText(
             tr_args(
                 self.tr("GPU : %1"),

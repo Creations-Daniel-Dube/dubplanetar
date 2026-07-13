@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-07    *
+#* Dernières Modifications -->   2026-07-12    *
 #***********************************************
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from dub_planetar.platform_env import compile_translations_hint, install_hint
+
 _MIN_PYTHON = (3, 11)
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_INSTALL_SCRIPT = _PROJECT_ROOT / "install-dubplanetar.ps1"
 
 _DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("PySide6", "PySide6", "Interface graphique Qt"),
@@ -95,7 +95,7 @@ def _translation_issues() -> list[PreflightIssue]:
             "Traductions incomplètes",
             "Fichiers .qm absents : "
             + ", ".join(missing)
-            + "\n\nExécutez : python scripts\\compile_translations.py",
+            + f"\n\nExécutez : {compile_translations_hint()}",
         )
     ]
 
@@ -114,19 +114,7 @@ def collect_preflight_issues() -> list[PreflightIssue]:
 
 
 def _install_hint() -> str:
-    script = _INSTALL_SCRIPT
-    if script.is_file():
-        return (
-            f"Exécutez le script d'installation :\n"
-            f"  .\\install-dubplanetar.ps1\n\n"
-            f"Chemin : {script}"
-        )
-    return (
-        "Depuis le dossier du projet :\n"
-        "  python -m venv .venv\n"
-        "  .\\.venv\\Scripts\\pip install -r requirements.txt\n"
-        "  .\\.venv\\Scripts\\pip install -e ."
-    )
+    return install_hint()
 
 
 def format_preflight_message(issues: list[PreflightIssue]) -> str:

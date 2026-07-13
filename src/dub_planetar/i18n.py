@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-05    *
+#* Dernières Modifications -->   2026-07-12    *
 #***********************************************
 from __future__ import annotations
 

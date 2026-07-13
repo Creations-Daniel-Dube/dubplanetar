@@ -1,10 +1,12 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-07    *
+#* Dernières Modifications -->   2026-07-12    *
 #***********************************************
 from __future__ import annotations
 
 import sys
+
+from dub_planetar.platform_env import install_script_command
 
 
 def main() -> None:
@@ -13,7 +15,7 @@ def main() -> None:
     except ImportError:
         print(
             "ERREUR : PySide6 n'est pas installé.\n"
-            "Exécutez : .\\install-dubplanetar.ps1",
+            f"Exécutez : {install_script_command()}",
             file=sys.stderr,
         )
         raise SystemExit(1) from None

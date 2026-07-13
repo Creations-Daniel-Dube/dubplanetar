@@ -3,7 +3,7 @@
 <TS version="2.1" language="fr">
 <context>
     <name>MainWindow</name>
-    <message><source>DubPlanetar — Soleil / Lune (CUDA)</source><translation>DubPlanetar — Soleil / Lune (CUDA)</translation></message>
+    <message><source>DubPlanetar — Soleil / Lune (CUDA) --- Version %1</source><translation>DubPlanetar — Soleil / Lune (CUDA) --- Version %1</translation></message>
     <message><source>GPU : %1</source><translation>GPU : %1</translation></message>
     <message><source>Cible</source><translation>Cible</translation></message>
     <message><source>Objet à empiler :</source><translation>Objet à empiler :</translation></message>
