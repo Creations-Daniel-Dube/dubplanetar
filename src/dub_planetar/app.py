@@ -53,10 +53,10 @@ _APP_ICON = Path(__file__).resolve().parent.parent.parent / "images" / "dubPlane
 
 _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
     "sun": {
-        "keep_ratio": 50.0,
+        "keep_ratio": 10.0,
         "max_frames": 0,
         "debayer": True,
-        "bayer_pattern": "AUTO",
+        "bayer_pattern": "BGRG",
         "white_balance": False,
         "auto_crop": True,
         "crop_margin": 5.0,
@@ -71,10 +71,10 @@ _PROFILE_DEFAULTS: dict[str, dict[str, object]] = {
         "protect_highlights": True,
     },
     "moon": {
-        "keep_ratio": 50.0,
+        "keep_ratio": 10.0,
         "max_frames": 0,
         "debayer": True,
-        "bayer_pattern": "AUTO",
+        "bayer_pattern": "BGRG",
         "white_balance": True,
         "auto_crop": True,
         "crop_margin": 5.0,
