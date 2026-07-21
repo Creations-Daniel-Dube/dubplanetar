@@ -18,16 +18,25 @@ if not defined PY (
   exit /b 1
 )
 
-echo DubPlanetar — installation (Windows^)
+echo ========================================================
+echo   DubPlanetar — installation (Windows)
+echo ========================================================
 echo Dossier : %CD%
+echo Statut  : en cours...
 echo.
-%PY% install_dubplanetar.py %*
+%PY% -u install_dubplanetar.py %*
 set "ERR=%ERRORLEVEL%"
 echo.
 if not "%ERR%"=="0" (
-  echo Installation terminee avec des erreurs (code %ERR%^).
+  echo ========================================================
+  echo   ECHEC DE L'INSTALLATION (code %ERR%^)
+  echo ========================================================
 ) else (
-  echo Installation terminee.
+  echo ========================================================
+  echo   INSTALLATION TERMINEE
+  echo   - Raccourci Bureau : DubPlanetar
+  echo   - L'application devrait s'etre ouverte
+  echo ========================================================
 )
 echo.
 pause

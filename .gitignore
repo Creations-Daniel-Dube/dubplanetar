@@ -13,3 +13,5 @@ build/
 *.tif
 *.avi
 output/
+install/**/*.zip
+install/**/*.tar.gz

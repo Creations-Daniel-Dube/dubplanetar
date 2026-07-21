@@ -15,6 +15,7 @@ DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF i
 - [Requirements](#requirements)
 - [Installation (recommended — double-click)](#installation-recommended--double-click)
 - [Installation (command line)](#installation-command-line)
+- [Install packs (distribution)](#install-packs-distribution)
 - [Launching](#launching)
 - [Usage](#usage)
 - [Sun and Moon profiles](#sun-and-moon-profiles)
@@ -183,6 +184,27 @@ python -c "import cupy as cp; d=cp.cuda.Device(0); d.use(); print(cp.cuda.runtim
 ```
 
 If this command prints your GPU name, the installation was successful.
+
+---
+
+
+
+## Install packs (distribution)
+
+To build distributable archives (without `.venv`):
+
+```bash
+python3 scripts/pack_install_bundles.py
+```
+
+Output:
+
+| Folder | Contents |
+| ------ | -------- |
+| `install/Windows/` | `Install.bat` + `DubPlanetar-<version>.zip` |
+| `install/Linux/` | `Install.sh` + `DubPlanetar-<version>.tar.gz` |
+
+On the target machine, copy **both** files from the OS folder into the same directory, then run `Install.bat` (Windows) or `./Install.sh` (Linux): extracts into the current directory, then runs the installer.
 
 ---
 
