@@ -13,5 +13,9 @@ build/
 *.tif
 *.avi
 output/
-install/**/*.zip
-install/**/*.tar.gz
+
+# Archives : ignorées partout, sauf les packs sous install/
+*.zip
+*.tar.gz
+!install/**/*.zip
+!install/**/*.tar.gz
