@@ -1,0 +1,23 @@
+DubPlanetar — pack d'installation Linux
+=======================================
+
+Téléchargez UN seul fichier depuis ce dossier GitHub :
+
+  dubPlanetar-<version>_install.tar.gz
+
+(README.txt / LISEZMOI.txt sont uniquement de la documentation.)
+
+Installation
+------------
+1. Téléchargez dubPlanetar-<version>_install.tar.gz dans un dossier vide
+   (ex. : /dubAstro/...).
+2. Décompressez l'archive dans ce dossier. Vous obtiendrez :
+     - Install.sh
+     - DubPlanetar-<version>.tar.gz
+3. Rendez l'installeur exécutable si besoin :
+     chmod +x Install.sh
+4. Lancez :
+     ./Install.sh
+   Ou double-cliquez sur Install.sh et choisissez de l'exécuter dans un terminal.
+5. Attendez le message de succès. DubPlanetar devrait s'ouvrir
+   automatiquement, et un raccourci sera créé sur le Bureau.

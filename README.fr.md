@@ -15,6 +15,7 @@ DubPlanetar transforme une séquence vidéo brute en une image finale super-rés
 - [Prérequis](#prérequis)
 - [Installation (recommandée — double-clic)](#installation-recommandée--double-clic)
 - [Installation (ligne de commande)](#installation-ligne-de-commande)
+- [Packs d'installation (distribution)](#packs-dinstallation-distribution)
 - [Lancement](#lancement)
 - [Utilisation](#utilisation)
 - [Profils Soleil et Lune](#profils-soleil-et-lune)
@@ -183,6 +184,29 @@ python -c "import cupy as cp; d=cp.cuda.Device(0); d.use(); print(cp.cuda.runtim
 ```
 
 Si cette commande affiche le nom de votre GPU, l'installation est réussie.
+
+---
+
+
+
+## Packs d'installation (distribution)
+
+Pour générer les archives prêtes à distribuer (sans le `.venv`) :
+
+```bash
+python3 scripts/pack_install_bundles.py
+```
+
+Résultat (publié sur GitHub) :
+
+| Dossier | Contenu |
+| ------- | ------- |
+| `install/Windows/` | `dubPlanetar-<version>_install.zip` (+ README / LISEZMOI) |
+| `install/Linux/` | `dubPlanetar-<version>_install.tar.gz` (+ README / LISEZMOI) |
+
+Les fichiers intermédiaires sont sous `install/<OS>/files/` (locaux uniquement, hors GitHub).
+
+Sur la machine cible : téléchargez le pack `_install` unique pour votre OS, décompressez-le, puis lancez `Install.bat` (Windows) ou `./Install.sh` (Linux).
 
 ---
 

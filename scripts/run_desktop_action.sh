@@ -30,10 +30,25 @@ cd "$root"
 
 case "$action" in
   install)
+    echo "========================================================"
+    echo "  DubPlanetar — installation"
+    echo "========================================================"
+    echo
     ./install-dubplanetar.sh
     status=$?
     echo
-    echo "Code de sortie : $status"
+    if [[ "$status" -ne 0 ]]; then
+      echo "========================================================"
+      echo "  ÉCHEC DE L'INSTALLATION (code $status)"
+      echo "========================================================"
+    else
+      echo "========================================================"
+      echo "  INSTALLATION TERMINÉE"
+      echo "  - Raccourci : Bureau / DubPlanetar"
+      echo "  - L'application devrait s'être ouverte"
+      echo "========================================================"
+    fi
+    echo
     read -r -p "Appuyez sur Entrée pour fermer… " || true
     exit "$status"
     ;;
