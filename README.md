@@ -197,14 +197,16 @@ To build distributable archives (without `.venv`):
 python3 scripts/pack_install_bundles.py
 ```
 
-Output:
+Output (published on GitHub):
 
 | Folder | Contents |
 | ------ | -------- |
-| `install/Windows/` | `Install.bat` + `DubPlanetar-<version>.zip` |
-| `install/Linux/` | `Install.sh` + `DubPlanetar-<version>.tar.gz` |
+| `install/Windows/` | `dubPlanetar-<version>_install.zip` (+ README / LISEZMOI) |
+| `install/Linux/` | `dubPlanetar-<version>_install.tar.gz` (+ README / LISEZMOI) |
 
-On the target machine, copy **both** files from the OS folder into the same directory, then run `Install.bat` (Windows) or `./Install.sh` (Linux): extracts into the current directory, then runs the installer.
+Intermediate build files live under `install/<OS>/files/` (local only, not on GitHub).
+
+On the target machine: download the single `_install` archive for your OS, extract it, then run `Install.bat` (Windows) or `./Install.sh` (Linux).
 
 ---
 

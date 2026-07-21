@@ -1,23 +1,19 @@
 DubPlanetar — Windows install pack
 ==================================
 
-IMPORTANT
----------
-Download ALL files from this GitHub folder into the same local directory
-before installing. Do not download only the .zip archive.
+Download ONE file from this GitHub folder:
 
-Required files in this folder:
-  - Install.bat
-  - DubPlanetar-<version>.zip
-  - this README (and LISEZMOI.txt)
+  dubPlanetar-<version>_install.zip
+
+(README.txt / LISEZMOI.txt are documentation only.)
 
 How to install
 --------------
-1. Create an empty folder on your PC (for example: Downloads\DubPlanetar).
-2. Download every file from this GitHub directory into that folder.
+1. Download dubPlanetar-<version>_install.zip into an empty folder
+   (for example: C:\dubAstro\...).
+2. Extract the archive in that folder. You will get:
+     - Install.bat
+     - DubPlanetar-<version>.zip
 3. Double-click Install.bat.
 4. Wait until the installer reports success. DubPlanetar should open
    automatically, and a desktop shortcut will be created.
-
-If Install.bat is missing, the archive alone is not enough — go back to
-GitHub and download the complete folder contents.

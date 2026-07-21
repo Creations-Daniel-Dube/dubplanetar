@@ -14,8 +14,11 @@ build/
 *.avi
 output/
 
-# Archives : ignorées partout, sauf les packs sous install/
+# Archives : ignorées partout…
 *.zip
 *.tar.gz
-!install/**/*.zip
-!install/**/*.tar.gz
+# …sauf les packs uniques à télécharger sous install/<OS>/
+!install/Windows/*.zip
+!install/Linux/*.tar.gz
+# Intermédiaires locaux (Install.* + archive app) — hors GitHub
+install/**/files/

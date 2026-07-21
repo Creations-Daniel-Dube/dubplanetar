@@ -5,9 +5,16 @@
 #***********************************************
 """Génère les packs d'installation Windows et Linux sous install/.
 
-Produit pour chaque OS :
-  - une archive (zip / tar.gz) contenant le projet prêt à installer
-  - un script Install.* qui décompresse l'archive ici puis lance l'installeur
+Pour chaque OS :
+  1. assemble le projet dans install/<OS>/files/
+       - DubPlanetar-<ver>.zip | .tar.gz  (contenu applicatif)
+       - Install.bat | Install.sh
+  2. emballe ces deux fichiers dans un pack unique à télécharger :
+       - install/Windows/dubPlanetar-<ver>_install.zip
+       - install/Linux/dubPlanetar-<ver>_install.tar.gz
+
+Le dossier files/ est local (hors Git) ; seuls le pack _install et les
+README/LISEZMOI sont destinés à GitHub.
 
 Usage (depuis la racine du dépôt) :
   python3 scripts/pack_install_bundles.py
@@ -25,6 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INSTALL_DIR = ROOT / "install"
 ARCHIVE_ROOT_NAME = "DubPlanetar"
+FILES_DIR_NAME = "files"
 
 # Fichiers / dossiers à copier à la racine de l'archive (chemins relatifs à ROOT).
 INCLUDE_TOP = (
@@ -133,7 +141,7 @@ def _build_payload(staging: Path) -> Path:
     return payload
 
 
-def _write_zip(payload: Path, zip_path: Path) -> None:
+def _write_payload_zip(payload: Path, zip_path: Path) -> None:
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     if zip_path.exists():
         zip_path.unlink()
@@ -144,12 +152,55 @@ def _write_zip(payload: Path, zip_path: Path) -> None:
                 zf.write(file_path, arcname)
 
 
-def _write_tar_gz(payload: Path, tar_path: Path) -> None:
+def _write_payload_tar_gz(payload: Path, tar_path: Path) -> None:
     tar_path.parent.mkdir(parents=True, exist_ok=True)
     if tar_path.exists():
         tar_path.unlink()
     with tarfile.open(tar_path, "w:gz") as tf:
         tf.add(payload, arcname=ARCHIVE_ROOT_NAME)
+
+
+def _write_flat_zip(files: list[Path], zip_path: Path) -> None:
+    """Archive plate : Install.* + archive applicative à la racine du zip."""
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    if zip_path.exists():
+        zip_path.unlink()
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for file_path in files:
+            zf.write(file_path, file_path.name)
+
+
+def _write_flat_tar_gz(files: list[Path], tar_path: Path) -> None:
+    """Archive plate : Install.* + archive applicative à la racine du tar.gz."""
+    tar_path.parent.mkdir(parents=True, exist_ok=True)
+    if tar_path.exists():
+        tar_path.unlink()
+    with tarfile.open(tar_path, "w:gz") as tf:
+        for file_path in files:
+            tf.add(file_path, arcname=file_path.name)
+
+
+def _clean_os_dir(os_dir: Path, *, keep_names: set[str]) -> None:
+    """Supprime les anciens artefacts à la racine de l'OS (hors README / packs)."""
+    if not os_dir.is_dir():
+        return
+    for child in os_dir.iterdir():
+        if child.name in keep_names:
+            continue
+        if child.name == FILES_DIR_NAME:
+            continue
+        if child.is_file() and (
+            child.name.startswith("DubPlanetar-")
+            or child.name.startswith("dubPlanetar-")
+            or child.name in {"Install.bat", "Install.sh"}
+        ):
+            child.unlink()
+
+
+def _reset_files_dir(files_dir: Path) -> None:
+    if files_dir.exists():
+        shutil.rmtree(files_dir)
+    files_dir.mkdir(parents=True, exist_ok=True)
 
 
 def _install_bat(archive_name: str) -> str:
@@ -339,39 +390,56 @@ def main() -> int:
     archive_base = f"DubPlanetar-{version}"
     zip_name = f"{archive_base}.zip"
     tar_name = f"{archive_base}.tar.gz"
+    win_bundle_name = f"dubPlanetar-{version}_install.zip"
+    lin_bundle_name = f"dubPlanetar-{version}_install.tar.gz"
 
     win_dir = INSTALL_DIR / "Windows"
     lin_dir = INSTALL_DIR / "Linux"
+    win_files = win_dir / FILES_DIR_NAME
+    lin_files = lin_dir / FILES_DIR_NAME
+
     win_dir.mkdir(parents=True, exist_ok=True)
     lin_dir.mkdir(parents=True, exist_ok=True)
+    _clean_os_dir(win_dir, keep_names={"README.txt", "LISEZMOI.txt", win_bundle_name})
+    _clean_os_dir(lin_dir, keep_names={"README.txt", "LISEZMOI.txt", lin_bundle_name})
+    _reset_files_dir(win_files)
+    _reset_files_dir(lin_files)
 
     print(f"DubPlanetar — packaging v{version}")
     print(f"Racine : {ROOT}")
 
     with tempfile.TemporaryDirectory(prefix="dubplanetar-pack-") as tmp:
         staging = Path(tmp)
-        print("\n==> Assemblage du contenu")
+        print("\n==> Assemblage du contenu applicatif")
         payload = _build_payload(staging)
 
-        zip_path = win_dir / zip_name
-        print(f"\n==> Archive Windows : {zip_path.relative_to(ROOT)}")
-        _write_zip(payload, zip_path)
+        zip_path = win_files / zip_name
+        print(f"\n==> Archive Windows (files/) : {zip_path.relative_to(ROOT)}")
+        _write_payload_zip(payload, zip_path)
 
-        tar_path = lin_dir / tar_name
-        print(f"==> Archive Linux   : {tar_path.relative_to(ROOT)}")
-        _write_tar_gz(payload, tar_path)
+        tar_path = lin_files / tar_name
+        print(f"==> Archive Linux   (files/) : {tar_path.relative_to(ROOT)}")
+        _write_payload_tar_gz(payload, tar_path)
 
-    bat_path = win_dir / "Install.bat"
-    sh_path = lin_dir / "Install.sh"
-    print(f"\n==> Wrapper Windows : {bat_path.relative_to(ROOT)}")
+    bat_path = win_files / "Install.bat"
+    sh_path = lin_files / "Install.sh"
+    print(f"\n==> Wrapper Windows (files/) : {bat_path.relative_to(ROOT)}")
     bat_path.write_text(_install_bat(zip_name), encoding="utf-8", newline="\r\n")
-    print(f"==> Wrapper Linux   : {sh_path.relative_to(ROOT)}")
+    print(f"==> Wrapper Linux   (files/) : {sh_path.relative_to(ROOT)}")
     sh_path.write_text(_install_sh(tar_name), encoding="utf-8", newline="\n")
     sh_path.chmod(sh_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
+    win_bundle = win_dir / win_bundle_name
+    lin_bundle = lin_dir / lin_bundle_name
+    print(f"\n==> Pack unique Windows : {win_bundle.relative_to(ROOT)}")
+    _write_flat_zip([bat_path, zip_path], win_bundle)
+    print(f"==> Pack unique Linux   : {lin_bundle.relative_to(ROOT)}")
+    _write_flat_tar_gz([sh_path, tar_path], lin_bundle)
+
     print("\nPacks prêts.")
-    print(f"  Windows : {win_dir}")
-    print(f"  Linux   : {lin_dir}")
+    print(f"  Windows : {win_bundle}")
+    print(f"  Linux   : {lin_bundle}")
+    print(f"  (intermédiaire local : {win_files.name}/ et {lin_files.name}/ — hors Git)")
     return 0
 
 
