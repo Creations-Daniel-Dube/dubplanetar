@@ -13,7 +13,8 @@ DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF i
 - [Overview](#overview)
 - [Features](#features)
 - [Requirements](#requirements)
-- [Installation](#installation)
+- [Installation (recommended — double-click)](#installation-recommended--double-click)
+- [Installation (command line)](#installation-command-line)
 - [Launching](#launching)
 - [Usage](#usage)
 - [Sun and Moon profiles](#sun-and-moon-profiles)
@@ -82,7 +83,52 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 
 
-## Installation
+## Installation (recommended — double-click)
+
+
+
+### 1. Prepare the computer (once)
+
+1. Recent **NVIDIA drivers** (CUDA 12)
+2. **Python 3.11 or later**:
+   - Windows: [python.org/downloads](https://www.python.org/downloads/) — check **Add python.exe to PATH**
+   - Ubuntu: usually already installed; otherwise `sudo apt install python3 python3-venv python3-pip`
+
+
+
+### 2. Get DubPlanetar
+
+Download the project (GitHub ZIP → Extract) or clone the repository, then open the `dubplanetar` folder.
+
+
+
+### 3. Install (double-click)
+
+| OS | File to double-click |
+| -- | -------------------- |
+| **Ubuntu** | `Installer DubPlanetar` (`.desktop` file) |
+| **Windows** | `Installer-DubPlanetar.bat` |
+
+Wait until you see “Installation terminée” / installation finished.
+
+> **Ubuntu — first time:** the desktop may ask you to trust the launcher (*Trust and Launch* / allow executing). That is normal, once only.
+
+
+
+### 4. Launch afterwards (double-click)
+
+| OS | File to double-click |
+| -- | -------------------- |
+| **Ubuntu** | `DubPlanetar` (`.desktop` file) |
+| **Windows** | `Lancer-DubPlanetar.bat` (or `Lancer-DubPlanetar.vbs` to avoid a black console window) |
+
+---
+
+
+
+## Installation (command line)
+
+For users comfortable with a terminal.
 
 
 
@@ -146,7 +192,13 @@ If this command prints your GPU name, the installation was successful.
 
 
 
-### Via the launch script (recommended — OS auto-detection)
+### Via double-click (recommended)
+
+See [Installation (recommended — double-click)](#installation-recommended--double-click) — step 4.
+
+
+
+### Via the launch script (terminal)
 
 **Windows:**
 

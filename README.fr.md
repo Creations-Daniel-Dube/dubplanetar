@@ -13,7 +13,8 @@ DubPlanetar transforme une séquence vidéo brute en une image finale super-rés
 - [Présentation](#présentation)
 - [Fonctionnalités](#fonctionnalités)
 - [Prérequis](#prérequis)
-- [Installation](#installation)
+- [Installation (recommandée — double-clic)](#installation-recommandée--double-clic)
+- [Installation (ligne de commande)](#installation-ligne-de-commande)
 - [Lancement](#lancement)
 - [Utilisation](#utilisation)
 - [Profils Soleil et Lune](#profils-soleil-et-lune)
@@ -82,7 +83,52 @@ DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec u
 
 
 
-## Installation
+## Installation (recommandée — double-clic)
+
+
+
+### 1. Préparer l’ordinateur (une seule fois)
+
+1. **Pilotes NVIDIA** récents (CUDA 12)
+2. **Python 3.11 ou plus** :
+   - Windows : [python.org/downloads](https://www.python.org/downloads/) — cochez **Add python.exe to PATH**
+   - Ubuntu : en général déjà présent ; sinon `sudo apt install python3 python3-venv python3-pip`
+
+
+
+### 2. Obtenir DubPlanetar
+
+Téléchargez le projet (ZIP GitHub → Extraire) ou clonez le dépôt, puis ouvrez le dossier `dubplanetar`.
+
+
+
+### 3. Installer (double-clic)
+
+| Système | Fichier à double-cliquer |
+| ------- | ------------------------ |
+| **Ubuntu** | `Installer DubPlanetar` (fichier `.desktop`) |
+| **Windows** | `Installer-DubPlanetar.bat` |
+
+Attendez la fin du message « Installation terminée ».
+
+> **Ubuntu — première fois :** le bureau peut demander de faire confiance au lanceur (*Faire confiance et lancer* / *Autoriser l’exécution*). C’est normal, une seule fois.
+
+
+
+### 4. Lancer ensuite (double-clic)
+
+| Système | Fichier à double-cliquer |
+| ------- | ------------------------ |
+| **Ubuntu** | `DubPlanetar` (fichier `.desktop`) |
+| **Windows** | `Lancer-DubPlanetar.bat` (ou `Lancer-DubPlanetar.vbs` pour éviter la fenêtre noire) |
+
+---
+
+
+
+## Installation (ligne de commande)
+
+Pour les utilisateurs à l’aise avec un terminal.
 
 
 
@@ -146,7 +192,13 @@ Si cette commande affiche le nom de votre GPU, l'installation est réussie.
 
 
 
-### Via le script de lancement (recommandé — autodétection OS)
+### Via double-clic (recommandé)
+
+Voir [Installation (recommandée — double-clic)](#installation-recommandée--double-clic) — étape 4.
+
+
+
+### Via le script de lancement (terminal)
 
 **Windows :**
 
