@@ -47,19 +47,20 @@ def venv_pip(root: Path | None = None) -> Path:
 def install_script_command(root: Path | None = None) -> str:
     """Commande recommandée pour lancer l'installateur sur l'OS courant."""
     base = root or project_root()
-    py_installer = base / "install_dubplanetar.py"
     if is_windows():
+        bat = base / "Installer-DubPlanetar.bat"
+        if bat.is_file():
+            return "double-clic sur Installer-DubPlanetar.bat"
         ps1 = base / "install-dubplanetar.ps1"
         if ps1.is_file():
             return ".\\install-dubplanetar.ps1"
-        if py_installer.is_file():
-            return "python install_dubplanetar.py"
         return "python install_dubplanetar.py"
+    desktop = base / "Installer DubPlanetar.desktop"
+    if desktop.is_file():
+        return "double-clic sur « Installer DubPlanetar »"
     sh = base / "install-dubplanetar.sh"
     if sh.is_file():
         return "./install-dubplanetar.sh"
-    if py_installer.is_file():
-        return "python3 install_dubplanetar.py"
     return "python3 install_dubplanetar.py"
 
 
@@ -82,18 +83,23 @@ def manual_install_steps() -> str:
 def install_hint(root: Path | None = None) -> str:
     base = root or project_root()
     command = install_script_command(base)
-    script_path = base / (
-        "install-dubplanetar.ps1"
-        if is_windows()
-        else "install-dubplanetar.sh"
-    )
-    if not script_path.is_file():
-        script_path = base / "install_dubplanetar.py"
-    if script_path.is_file():
+    if is_windows():
+        preferred = base / "Installer-DubPlanetar.bat"
+        if not preferred.is_file():
+            preferred = base / "install-dubplanetar.ps1"
+        if not preferred.is_file():
+            preferred = base / "install_dubplanetar.py"
+    else:
+        preferred = base / "Installer DubPlanetar.desktop"
+        if not preferred.is_file():
+            preferred = base / "install-dubplanetar.sh"
+        if not preferred.is_file():
+            preferred = base / "install_dubplanetar.py"
+    if preferred.is_file():
         return (
-            f"Exécutez le script d'installation :\n"
+            f"Lancez l'installateur :\n"
             f"  {command}\n\n"
-            f"Chemin : {script_path}"
+            f"Chemin : {preferred}"
         )
     return manual_install_steps()
 
@@ -104,7 +110,11 @@ def compile_translations_hint() -> str:
 
 def launch_hint() -> str:
     if is_windows():
+        if (project_root() / "Lancer-DubPlanetar.bat").is_file():
+            return "double-clic sur Lancer-DubPlanetar.bat"
         return ".\\launch-dubplanetar.ps1"
+    if (project_root() / "DubPlanetar.desktop").is_file():
+        return "double-clic sur DubPlanetar.desktop"
     return "./launch-dubplanetar.sh"
 
 

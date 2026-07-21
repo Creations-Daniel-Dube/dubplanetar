@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install DubPlanetar
+Name[fr]=Installer DubPlanetar
+GenericName=DubPlanetar installer
+Comment=Install DubPlanetar dependencies (creates .venv)
+Comment[fr]=Installe les dépendances DubPlanetar (crée le .venv)
+Exec=bash -c "exec \\"\\$(dirname \\"\\$0\\")/scripts/run_desktop_action.sh\\" install \\"\\$0\\"" %k
+Icon=system-software-install
+Terminal=true
+Categories=Science;Astronomy;
+StartupNotify=true
+Keywords=install;setup;dubplanetar;
+Keywords[fr]=installer;installation;dubplanetar;

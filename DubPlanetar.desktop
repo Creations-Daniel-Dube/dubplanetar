@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DubPlanetar
+GenericName=SeeStar planetary stacking
+Comment=GPU Sun/Moon stacking for SeeStar RAW AVI videos
+Comment[fr]=Empilement GPU Soleil/Lune pour vidéos RAW SeeStar
+Exec=bash -c "exec \\"\\$(dirname \\"\\$0\\")/scripts/run_desktop_action.sh\\" launch \\"\\$0\\"" %k
+Icon=applications-science
+Terminal=false
+Categories=Science;Astronomy;
+StartupNotify=true
+Keywords=astronomy;stacking;seestar;sun;moon;
+Keywords[fr]=astronomie;empilement;seestar;soleil;lune;
