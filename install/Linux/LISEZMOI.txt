@@ -1,0 +1,27 @@
+DubPlanetar — pack d'installation Linux
+=======================================
+
+IMPORTANT
+---------
+Téléchargez TOUS les fichiers de ce dossier GitHub dans le même répertoire
+local avant d'installer. Ne téléchargez pas seulement l'archive .tar.gz.
+
+Fichiers requis dans ce dossier :
+  - Install.sh
+  - DubPlanetar-<version>.tar.gz
+  - ce LISEZMOI (et README.txt)
+
+Installation
+------------
+1. Créez un dossier vide sur votre ordinateur (ex. : ~/Téléchargements/DubPlanetar).
+2. Téléchargez tous les fichiers de ce répertoire GitHub dans ce dossier.
+3. Rendez l'installeur exécutable si besoin :
+     chmod +x Install.sh
+4. Lancez :
+     ./Install.sh
+   Ou double-cliquez sur Install.sh et choisissez de l'exécuter dans un terminal.
+5. Attendez le message de succès. DubPlanetar devrait s'ouvrir
+   automatiquement, et un raccourci sera créé sur le Bureau.
+
+Si Install.sh est absent, l'archive seule ne suffit pas — retournez sur
+GitHub et téléchargez tout le contenu du dossier.
