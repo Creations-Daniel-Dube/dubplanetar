@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-21    *
+#* Dernières Modifications -->   2026-09-03    *
 #***********************************************
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt, QSettings, QThread, QTimer
 from PySide6.QtGui import QIcon, QImage, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QRadioButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -43,7 +45,9 @@ from dub_planetar.i18n import (
     tr_args,
     tr_pipeline,
 )
+from dub_planetar.pipeline.decoder import open_avi_capture, probe_avi, read_capture_frame
 from dub_planetar.pipeline.stacker import StackResult, StackSettings, check_cuda_available
+from dub_planetar.range_slider import RangeSlider
 from dub_planetar.worker import StackWorker
 
 _SETTINGS_ORG = "DubPlanetar"
@@ -157,6 +161,15 @@ class MainWindow(QMainWindow):
         self._form_labels: dict[str, QLabel] = {}
         self._last_stage_key: str | None = None
         self._current_locale = DEFAULT_LOCALE
+        self._preview_capture = None
+        self._preview_path: Path | None = None
+        self._video_frame_count = 0
+        self._video_fps = 0.0
+        self._pending_preview_index: int | None = None
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setSingleShot(True)
+        self._preview_timer.setInterval(40)
+        self._preview_timer.timeout.connect(self._flush_source_preview)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -187,6 +200,32 @@ class MainWindow(QMainWindow):
         file_layout.addWidget(self.input_edit)
         file_layout.addWidget(self.browse_btn)
         left_col.addWidget(self.file_group)
+
+        self.range_group = QGroupBox()
+        range_layout = QVBoxLayout(self.range_group)
+        self.full_video_radio = QRadioButton()
+        self.section_radio = QRadioButton()
+        self.full_video_radio.setChecked(True)
+        self.section_radio.setEnabled(False)
+        self._range_buttons = QButtonGroup(self)
+        self._range_buttons.setExclusive(True)
+        self._range_buttons.addButton(self.full_video_radio)
+        self._range_buttons.addButton(self.section_radio)
+        range_layout.addWidget(self.full_video_radio)
+        range_layout.addWidget(self.section_radio)
+        self.range_slider = RangeSlider()
+        self.range_slider.setEnabled(False)
+        self.range_labels = QLabel()
+        self.range_labels.setWordWrap(True)
+        self.range_labels.setEnabled(False)
+        range_layout.addWidget(self.range_slider)
+        range_layout.addWidget(self.range_labels)
+        self.section_radio.toggled.connect(self._on_section_toggled)
+        self.range_slider.handleMoved.connect(self._on_range_handle_moved)
+        self.range_slider.sliderReleased.connect(self._on_range_slider_released)
+        self.range_slider.startChanged.connect(self._update_range_labels)
+        self.range_slider.endChanged.connect(self._update_range_labels)
+        left_col.addWidget(self.range_group)
 
         self.settings_group = QGroupBox()
         form = QFormLayout(self.settings_group)
@@ -336,6 +375,7 @@ class MainWindow(QMainWindow):
 
         self._connect_settings_persistence()
         self._restore_ui_settings()
+        self._refresh_video_range()
 
     def _make_form_label(self, key: str) -> QLabel:
         label = QLabel()
@@ -364,6 +404,11 @@ class MainWindow(QMainWindow):
         self.file_group.setTitle(self.tr("Vidéo source"))
         self.input_edit.setPlaceholderText(self.tr("Sélectionnez un AVI RAW SeeStar…"))
         self.browse_btn.setText(self.tr("Parcourir…"))
+
+        self.range_group.setTitle(self.tr("Zone à empiler"))
+        self.full_video_radio.setText(self.tr("Empiler toute la vidéo"))
+        self.section_radio.setText(self.tr("Empiler seulement la section suivante"))
+        self._update_range_labels()
 
         self.settings_group.setTitle(self.tr("Réglages"))
         self._form_labels["keep_ratio"].setText(
@@ -468,6 +513,7 @@ class MainWindow(QMainWindow):
         self.black_spin.valueChanged.connect(self._save_ui_settings)
         self.protect_check.stateChanged.connect(self._save_ui_settings)
         self.input_edit.textChanged.connect(self._save_ui_settings)
+        self.input_edit.textChanged.connect(self._refresh_video_range)
 
     def _active_target_key(self) -> str:
         data = self.target_combo.currentData()
@@ -629,6 +675,8 @@ class MainWindow(QMainWindow):
                 widget.blockSignals(False)
             self._switching_profile = False
 
+        self._refresh_video_range()
+
     def _restore_ui_settings(self) -> None:
         _migrate_legacy_settings()
         settings = self._settings()
@@ -703,6 +751,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self._save_ui_settings()
+        self._close_preview_capture()
         super().closeEvent(event)
 
     def _start_stack(self) -> None:
@@ -735,6 +784,8 @@ class MainWindow(QMainWindow):
             sharpen_radius=self.sharpen_radius_spin.value(),
             flatten_strength=self.flatten_spin.value() / 100.0,
             max_frames=self.max_frames.value() or None,
+            start_frame=self.range_slider.start() if self.section_radio.isChecked() else 0,
+            end_frame=self.range_slider.end() if self.section_radio.isChecked() else None,
         )
 
         self.stack_btn.setEnabled(False)
@@ -761,6 +812,124 @@ class MainWindow(QMainWindow):
         self._thread.finished.connect(self._cleanup_thread)
 
         self._thread.start()
+
+    def _close_preview_capture(self) -> None:
+        if self._preview_capture is not None:
+            self._preview_capture.release()
+            self._preview_capture = None
+        self._preview_path = None
+
+    def _refresh_video_range(self) -> None:
+        if self._restoring_settings or self._switching_profile:
+            return
+
+        path_text = self.input_edit.text().strip()
+        path = Path(path_text) if path_text else None
+        if path is None or not path.is_file():
+            self._close_preview_capture()
+            self._video_frame_count = 0
+            self._video_fps = 0.0
+            self.range_slider.set_span(0, 0)
+            if self.section_radio.isChecked():
+                self.full_video_radio.setChecked(True)
+            self._update_range_controls()
+            return
+
+        if self._preview_path == path and self._preview_capture is not None:
+            self._update_range_controls()
+            return
+
+        self._close_preview_capture()
+        try:
+            probe = probe_avi(path)
+            last = max(0, probe.frame_count - 1) if probe.frame_count else 0
+            self._preview_capture = open_avi_capture(path)
+            self._preview_path = path
+            self._video_frame_count = probe.frame_count
+            self._video_fps = probe.fps
+            self.range_slider.set_span(0, last)
+        except Exception:
+            self._video_frame_count = 0
+            self._video_fps = 0.0
+            self.range_slider.set_span(0, 0)
+            if self.section_radio.isChecked():
+                self.full_video_radio.setChecked(True)
+
+        self._update_range_controls()
+
+    def _update_range_controls(self) -> None:
+        has_video = self._video_frame_count > 0
+        self.section_radio.setEnabled(has_video)
+        section_mode = has_video and self.section_radio.isChecked()
+        self.range_slider.setEnabled(section_mode)
+        self.range_labels.setEnabled(section_mode)
+        self._update_range_labels()
+
+    def _on_section_toggled(self, checked: bool) -> None:
+        if checked and self._video_frame_count > 0:
+            self.range_slider.reset_full_span()
+        self._update_range_controls()
+        QTimer.singleShot(0, self._sync_panel_heights)
+
+    def _format_timecode(self, frame: int) -> str:
+        fps = self._video_fps
+        if fps <= 0:
+            return "--:--"
+        seconds = frame / fps
+        minutes = int(seconds // 60)
+        secs = seconds - minutes * 60
+        return f"{minutes}:{secs:05.2f}"
+
+    def _update_range_labels(self, *_args: object) -> None:
+        if self._video_frame_count <= 0:
+            self.range_labels.setText(
+                self.tr("Sélectionnez une vidéo pour choisir une section.")
+            )
+            return
+        start = self.range_slider.start()
+        end = self.range_slider.end()
+        self.range_labels.setText(
+            tr_args(
+                self.tr("Début : frame %1 (%2)  —  Fin : frame %3 (%4)"),
+                start,
+                self._format_timecode(start),
+                end,
+                self._format_timecode(end),
+            )
+        )
+
+    def _on_range_handle_moved(self, _which: str, index: int) -> None:
+        self._pending_preview_index = index
+        self._preview_timer.start()
+
+    def _on_range_slider_released(self, _which: str, index: int) -> None:
+        self._preview_timer.stop()
+        self._pending_preview_index = index
+        self._flush_source_preview()
+
+    def _flush_source_preview(self) -> None:
+        index = self._pending_preview_index
+        self._pending_preview_index = None
+        if index is None:
+            return
+        self._show_source_preview(index)
+
+    def _show_source_preview(self, index: int) -> None:
+        if self._start_time is not None:
+            return
+        if not self.section_radio.isChecked() or self._preview_capture is None:
+            return
+        frame = read_capture_frame(self._preview_capture, index)
+        if frame is None:
+            return
+        pixmap = self._to_qpixmap(frame, rgb=False)
+        self.preview.setPixmap(
+            pixmap.scaled(
+                self.preview.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
 
     def _format_duration(self, seconds: float) -> str:
         if seconds >= 60:

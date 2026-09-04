@@ -12,6 +12,11 @@
     <message><source>Vidéo source</source><translation>Quellvideo</translation></message>
     <message><source>Sélectionnez un AVI RAW SeeStar…</source><translation>SeeStar RAW AVI auswählen…</translation></message>
     <message><source>Parcourir…</source><translation>Durchsuchen…</translation></message>
+    <message><source>Zone à empiler</source><translation>Stapelbereich</translation></message>
+    <message><source>Empiler toute la vidéo</source><translation>Gesamtes Video stapeln</translation></message>
+    <message><source>Empiler seulement la section suivante</source><translation>Nur den folgenden Abschnitt stapeln</translation></message>
+    <message><source>Sélectionnez une vidéo pour choisir une section.</source><translation>Wählen Sie ein Video, um einen Abschnitt zu wählen.</translation></message>
+    <message><source>Début : frame %1 (%2)  —  Fin : frame %3 (%4)</source><translation>Anfang: Frame %1 (%2)  —  Ende: Frame %3 (%4)</translation></message>
     <message><source>Réglages</source><translation>Einstellungen</translation></message>
     <message><source>Frames conservées (moins = plus net)</source><translation>Behaltene Frames (weniger = schärfer)</translation></message>
     <message><source>Limite de frames (0 = toutes)</source><translation>Frame-Limit (0 = alle)</translation></message>

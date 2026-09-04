@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-21    *
+#* Dernières Modifications -->   2026-09-03    *
 #***********************************************
 from __future__ import annotations
 
@@ -23,13 +23,65 @@ class FrameBatch:
 ProgressCallback = Callable[[str, float], None]
 
 
+@dataclass(frozen=True)
+class VideoProbe:
+    frame_count: int
+    fps: float
+    width: int
+    height: int
+
+
+def probe_avi(path: Path) -> VideoProbe:
+    """Lit les métadonnées d'un AVI sans charger les frames."""
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        raise PipelineError("error.video_open", path)
+    try:
+        return VideoProbe(
+            frame_count=max(0, int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) or 0),
+            fps=float(capture.get(cv2.CAP_PROP_FPS) or 0.0),
+            width=int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0),
+            height=int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0),
+        )
+    finally:
+        capture.release()
+
+
+def open_avi_capture(path: Path) -> cv2.VideoCapture:
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        raise PipelineError("error.video_open", path)
+    return capture
+
+
+def _normalize_raw(raw: np.ndarray) -> np.ndarray:
+    if raw.dtype == np.uint16:
+        return raw.astype(np.float32)
+    return raw.astype(np.float32) * (65535.0 / 255.0)
+
+
+def _seek_frame(capture: cv2.VideoCapture, index: int) -> None:
+    capture.set(cv2.CAP_PROP_POS_FRAMES, max(0, index))
+
+
+def read_capture_frame(capture: cv2.VideoCapture, index: int) -> np.ndarray | None:
+    """Lit une frame (plan RAW normalisé float32) à l'index donné."""
+    _seek_frame(capture, max(0, index))
+    ok, frame = capture.read()
+    if not ok:
+        return None
+    return _normalize_raw(_extract_raw_plane(frame))
+
+
 def iter_avi_frames(
     path: Path,
     *,
     max_frames: int | None = None,
+    start_frame: int = 0,
+    end_frame: int | None = None,
     on_progress: ProgressCallback | None = None,
 ) -> tuple[int, int, list[np.ndarray]]:
-    """Lit toutes les frames d'un AVI RAW SeeStar (mono 8/16 bits)."""
+    """Lit les frames d'un AVI RAW SeeStar (mono 8/16 bits)."""
     capture = cv2.VideoCapture(str(path))
     if not capture.isOpened():
         raise PipelineError("error.video_open", path)
@@ -38,28 +90,40 @@ def iter_avi_frames(
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+    start = max(0, start_frame)
+    last = end_frame
+    if last is not None:
+        last = max(start, last)
+    if total > 0 and last is not None:
+        last = min(last, total - 1)
+
+    span = 1
+    if last is not None:
+        span = max(1, last - start + 1)
+    elif total > start:
+        span = total - start
+
     frames: list[np.ndarray] = []
-    index = 0
+    index = start
+    if start > 0:
+        _seek_frame(capture, start)
 
     while True:
+        if last is not None and index > last:
+            break
+
         ok, frame = capture.read()
         if not ok:
             break
 
-        raw = _extract_raw_plane(frame)
-        if raw.dtype == np.uint16:
-            normalized = raw.astype(np.float32)
-        else:
-            normalized = raw.astype(np.float32) * (65535.0 / 255.0)
-
-        frames.append(normalized)
+        frames.append(_normalize_raw(_extract_raw_plane(frame)))
         index += 1
 
-        if max_frames is not None and index >= max_frames:
+        if max_frames is not None and len(frames) >= max_frames:
             break
 
-        if on_progress and total > 0 and index % 25 == 0:
-            on_progress("stage.read_frames", index / total)
+        if on_progress and span > 0 and len(frames) % 25 == 0:
+            on_progress("stage.read_frames", min(1.0, len(frames) / span))
 
     capture.release()
 
