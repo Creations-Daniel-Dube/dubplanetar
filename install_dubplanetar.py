@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-21    *
+#* Dernières Modifications -->   2026-09-03    *
 #***********************************************
 """Installe DubPlanetar : crée un .venv natif selon l'OS, puis les dépendances.
 
@@ -187,6 +187,11 @@ def _install_desktop_shortcut() -> Path | None:
             icon = candidate.as_posix()
             break
 
+    exec_path = launch_sh.as_posix()
+    if " " in exec_path:
+        exec_path = f'"{exec_path}"'
+    icon_path = f'"{icon}"' if " " in icon else icon
+
     content = (
         "[Desktop Entry]\n"
         "Version=1.0\n"
@@ -195,9 +200,9 @@ def _install_desktop_shortcut() -> Path | None:
         "GenericName=SeeStar planetary stacking\n"
         "Comment=GPU Sun/Moon stacking for SeeStar RAW AVI videos\n"
         "Comment[fr]=Empilement GPU Soleil/Lune pour vidéos RAW SeeStar\n"
-        f"Exec={launch_sh.as_posix()}\n"
+        f"Exec={exec_path}\n"
         f"Path={ROOT.as_posix()}\n"
-        f"Icon={icon}\n"
+        f"Icon={icon_path}\n"
         "Terminal=false\n"
         "Categories=Science;Astronomy;\n"
         "StartupNotify=true\n"

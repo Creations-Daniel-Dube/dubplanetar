@@ -12,6 +12,11 @@
     <message><source>Vidéo source</source><translation>Vidéo source</translation></message>
     <message><source>Sélectionnez un AVI RAW SeeStar…</source><translation>Sélectionnez un AVI RAW SeeStar…</translation></message>
     <message><source>Parcourir…</source><translation>Parcourir…</translation></message>
+    <message><source>Zone à empiler</source><translation>Zone à empiler</translation></message>
+    <message><source>Empiler toute la vidéo</source><translation>Empiler toute la vidéo</translation></message>
+    <message><source>Empiler seulement la section suivante</source><translation>Empiler seulement la section suivante</translation></message>
+    <message><source>Sélectionnez une vidéo pour choisir une section.</source><translation>Sélectionnez une vidéo pour choisir une section.</translation></message>
+    <message><source>Début : frame %1 (%2)  —  Fin : frame %3 (%4)</source><translation>Début : frame %1 (%2)  —  Fin : frame %3 (%4)</translation></message>
     <message><source>Réglages</source><translation>Réglages</translation></message>
     <message><source>Frames conservées (moins = plus net)</source><translation>Frames conservées (moins = plus net)</translation></message>
     <message><source>Limite de frames (0 = toutes)</source><translation>Limite de frames (0 = toutes)</translation></message>

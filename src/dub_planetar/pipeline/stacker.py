@@ -1,6 +1,6 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-21    *
+#* Dernières Modifications -->   2026-09-03    *
 #***********************************************
 from __future__ import annotations
 
@@ -38,6 +38,8 @@ class StackSettings:
     sharpen_radius: float = 2.0
     flatten_strength: float = 0.0
     max_frames: int | None = None
+    start_frame: int = 0
+    end_frame: int | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,8 @@ def stack_video(
     width, height, frames = iter_avi_frames(
         input_path,
         max_frames=settings.max_frames,
+        start_frame=settings.start_frame,
+        end_frame=settings.end_frame,
         on_progress=lambda msg, frac: report(msg, frac * 0.25),
     )
 
