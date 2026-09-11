@@ -1,0 +1,25 @@
+---
+description: Incrémenter la version du logiciel de +1 à chaque modification
+alwaysApply: true
+---
+
+# Version du logiciel
+
+À **chaque** modification réelle du projet (code, UI, traductions, installateurs, docs liées au produit), incrémenter le dernier segment de **1**.
+
+Exemple : `0.8.200` → `0.8.201` → `0.8.202`.
+
+## Où mettre à jour (toujours les 4)
+
+- `pyproject.toml` (`version = "..."`)
+- `src/dub_planetar/__init__.py` (`__version__`)
+- `README.md` (Current version)
+- `README.fr.md` (Version actuelle)
+
+Faire le bump **dans le même changement**, pas en suivi.
+
+## Exceptions
+
+- Si l’utilisateur donne une version précise (ex. `0.8.200`), utiliser **cette** version.
+- Ne pas bumper pour une réponse sans modification de fichiers.
+- Ne pas sauter de numéros sauf demande explicite.
