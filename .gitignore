@@ -22,3 +22,11 @@ output/
 !install/Linux/*.tar.gz
 # Intermédiaires locaux (Install.* + archive app) — hors GitHub
 install/**/files/
+
+# Workspace Cursor / VS Code local
+dubplanetar.code-workspace
+
+# Lanceurs Git locaux (non versionnés)
+push-developpement.sh
+push-distribution.sh
+

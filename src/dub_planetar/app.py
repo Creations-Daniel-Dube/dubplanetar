@@ -1,6 +1,7 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-09-03    *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
 #***********************************************
 from __future__ import annotations
 
@@ -48,6 +49,7 @@ from dub_planetar.i18n import (
 from dub_planetar.pipeline.decoder import open_avi_capture, probe_avi, read_capture_frame
 from dub_planetar.pipeline.stacker import StackResult, StackSettings, check_cuda_available
 from dub_planetar.range_slider import RangeSlider
+from dub_planetar.theme import COLOR_BORDER, COLOR_LABEL, COLOR_PREVIEW, apply_theme
 from dub_planetar.worker import StackWorker
 
 _SETTINGS_ORG = "DubPlanetar"
@@ -172,6 +174,7 @@ class MainWindow(QMainWindow):
         self._preview_timer.timeout.connect(self._flush_source_preview)
 
         central = QWidget()
+        central.setObjectName("centralPanel")
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         left_col = QVBoxLayout()
@@ -344,7 +347,9 @@ class MainWindow(QMainWindow):
         self.preview = QLabel()
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview.setMinimumWidth(360)
-        self.preview.setStyleSheet("QLabel { background: #111; color: #aaa; border: 1px solid #333; }")
+        self.preview.setStyleSheet(
+            f"QLabel {{ background: {COLOR_PREVIEW}; color: {COLOR_LABEL}; border: 1px solid {COLOR_BORDER}; }}"
+        )
         right_col.addWidget(self.preview, stretch=1)
 
         self.status_label = QLabel()
@@ -352,12 +357,16 @@ class MainWindow(QMainWindow):
 
         self.time_label = QLabel()
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_label.setStyleSheet("QLabel { font-size: 15px; font-weight: bold; }")
+        self.time_label.setStyleSheet(
+            f"QLabel {{ font-size: 15px; font-weight: bold; color: {COLOR_LABEL}; }}"
+        )
         right_col.addWidget(self.time_label)
 
         self._left_panel = QWidget()
+        self._left_panel.setObjectName("leftPanel")
         self._left_panel.setLayout(left_col)
         self._right_panel = QWidget()
+        self._right_panel.setObjectName("rightPanel")
         self._right_panel.setLayout(right_col)
 
         main_layout.addWidget(self._left_panel, 0, Qt.AlignmentFlag.AlignTop)
@@ -1054,6 +1063,7 @@ def run_app(existing_app: QApplication | None = None) -> None:
     QApplication.setOrganizationName(_SETTINGS_ORG)
     QApplication.setApplicationName(_SETTINGS_APP)
     app = existing_app or QApplication(sys.argv)
+    apply_theme(app)
     install_translator(app)
     if _APP_ICON.is_file():
         app.setWindowIcon(QIcon(str(_APP_ICON)))

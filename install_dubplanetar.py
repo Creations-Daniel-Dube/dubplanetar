@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-09-03    *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
 #***********************************************
 """Installe DubPlanetar : crée un .venv natif selon l'OS, puis les dépendances.
 

@@ -1,12 +1,22 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-09-03    *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
 #***********************************************
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen, QPolygon
 from PySide6.QtWidgets import QSizePolicy, QWidget
+
+from dub_planetar.theme import (
+    COLOR_BORDER,
+    COLOR_CONTROL,
+    COLOR_DISABLED,
+    COLOR_FRAME,
+    COLOR_HIGHLIGHT,
+    COLOR_LABEL,
+)
 
 _HANDLE_W = 12
 _HANDLE_H = 16
@@ -150,10 +160,10 @@ class RangeSlider(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         enabled = self.isEnabled()
-        groove_bg = QColor("#3a3a3a") if enabled else QColor("#2a2a2a")
-        selected = QColor("#3d7ea6") if enabled else QColor("#4a4a4a")
-        handle_fill = QColor("#e8e8e8") if enabled else QColor("#777777")
-        handle_border = QColor("#1a1a1a") if enabled else QColor("#444444")
+        groove_bg = QColor(COLOR_FRAME) if enabled else QColor(COLOR_CONTROL)
+        selected = QColor(COLOR_HIGHLIGHT) if enabled else QColor(COLOR_DISABLED)
+        handle_fill = QColor(COLOR_LABEL) if enabled else QColor(COLOR_DISABLED)
+        handle_border = QColor(COLOR_BORDER) if enabled else QColor(COLOR_FRAME)
 
         groove = self._groove_rect()
         painter.setPen(Qt.PenStyle.NoPen)

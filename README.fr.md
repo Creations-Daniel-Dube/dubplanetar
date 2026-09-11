@@ -4,6 +4,8 @@
 
 **Empilement GPU (Nvidia CUDA) Soleil / Lune** pour vidéos AVI RAW capturées avec un appareil **SeeStar** (S50, S30, S30 Pro).
 
+Version actuelle : **0.8.250** BETA.
+
 DubPlanetar transforme une séquence vidéo brute en une image finale super-résolue au format TIFF 16 bits, optimisée pour révéler les détails du disque solaire ou lunaire.
 
 ---
@@ -16,6 +18,7 @@ DubPlanetar transforme une séquence vidéo brute en une image finale super-rés
 - [Installation (recommandée — double-clic)](#installation-recommandée--double-clic)
 - [Installation (ligne de commande)](#installation-ligne-de-commande)
 - [Packs d'installation (distribution)](#packs-dinstallation-distribution)
+- [Dépôts GitHub](#dépôts-github)
 - [Lancement](#lancement)
 - [Utilisation](#utilisation)
 - [Profils Soleil et Lune](#profils-soleil-et-lune)
@@ -50,6 +53,7 @@ DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec u
 ## Fonctionnalités
 
 - Interface graphique **PySide6** (Qt) avec aperçu du résultat
+- **Zone à empiler** : toute la vidéo, ou seulement une plage (timeline à deux curseurs, aperçu de la frame de début ou de fin)
 - Traitement **100 % GPU** (CuPy / CUDA) — score de netteté, alignement, empilement, debayer
 - Profils prédéfinis **Soleil** et **Lune** avec réglages optimisés
 - Détection automatique du motif Bayer (BGGR, GRBG, GBRG, RGGB)
@@ -99,7 +103,14 @@ DubPlanetar automatise l'ensemble de ce pipeline sur GPU NVIDIA via CUDA, avec u
 
 ### 2. Obtenir DubPlanetar
 
-Téléchargez le projet (ZIP GitHub → Extraire) ou clonez le dépôt, puis ouvrez le dossier `dubplanetar`.
+Téléchargez le projet depuis le dépôt **utilisateurs** (ZIP GitHub → Extraire) ou clonez-le, puis ouvrez le dossier `dubplanetar` :
+
+```bash
+git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
+cd dubplanetar
+```
+
+Voir [Dépôts GitHub](#dépôts-github) pour la distinction développement / distribution.
 
 
 
@@ -135,8 +146,17 @@ Pour les utilisateurs à l’aise avec un terminal.
 
 ### 1. Cloner le dépôt
 
+**Utilisateurs** (versions jugées utilisables) :
+
 ```bash
 git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
+cd dubplanetar
+```
+
+**Développement** :
+
+```bash
+git clone git@github.com:DarthDub66/dubplanetar.git
 cd dubplanetar
 ```
 
@@ -212,6 +232,19 @@ Sur la machine cible : téléchargez le pack `_install` unique pour votre OS, d�
 
 
 
+## Dépôts GitHub
+
+| Dépôt | Rôle |
+| ----- | ---- |
+| [Creations-Daniel-Dube/dubplanetar](https://github.com/Creations-Daniel-Dube/dubplanetar) | **Distribution** — versions destinées aux utilisateurs, lorsqu’elles sont jugées utilisables |
+| [DarthDub66/dubplanetar](https://github.com/DarthDub66/dubplanetar) | **Développement** — travail en cours, pas forcément prêt à l’emploi |
+
+Les packs d’installation publiés pour le public se trouvent sur le dépôt **Creations-Daniel-Dube**.
+
+---
+
+
+
 ## Lancement
 
 
@@ -272,10 +305,13 @@ dubplanetar
 1. **Lancer** DubPlanetar
 2. **Choisir la cible** : ☀ Soleil ou ☾ Lune (charge le profil correspondant)
 3. **Sélectionner** un fichier AVI RAW SeeStar via *Parcourir…*
-4. **Ajuster** les paramètres si nécessaire (les valeurs par défaut du profil conviennent dans la plupart des cas)
-5. Cliquer sur **Empiler**
-6. Suivre la progression dans la barre et l'aperçu à droite
-7. Le fichier `*_stacked.tiff` est créé **à côté de la vidéo source**
+4. **Choisir la zone à empiler** (sous *Vidéo source*) :
+   - *Empiler toute la vidéo* (défaut)
+   - *Empiler seulement la section suivante* : les curseurs partent à **0 %** et **100 %** ; déplacez le début et/ou la fin. L’image correspondant au curseur déplacé s’affiche dans **Aperçu du résultat**
+5. **Ajuster** les autres paramètres si nécessaire (les valeurs par défaut du profil conviennent dans la plupart des cas)
+6. Cliquer sur **Empiler**
+7. Suivre la progression dans la barre et l'aperçu à droite
+8. Le fichier `*_stacked.tiff` est créé **à côté de la vidéo source**
 
 ---
 
@@ -301,6 +337,16 @@ Les profils préconfigurent les paramètres pour chaque cible. Vos réglages son
 
 
 ## Paramètres détaillés
+
+
+
+### Zone à empiler
+
+- **Empiler toute la vidéo** : lit la séquence depuis le début (comportement habituel).
+- **Empiler seulement la section suivante** : n’empile que la plage entre les deux curseurs.
+- La **timeline** représente toute la vidéo. Au choix de ce mode (et à chaque nouveau fichier), les curseurs sont à **0 %** (première frame) et **100 %** (dernière frame).
+- Déplacer un curseur affiche la frame correspondante dans **Aperçu du résultat**, pour caler précisément le début ou la fin.
+- Les étiquettes indiquent le numéro de frame et le timecode.
 
 
 
@@ -349,7 +395,7 @@ Le traitement s'exécute entièrement sur GPU :
 Vidéo AVI RAW
     │
     ▼
-1. Lecture des frames (OpenCV)
+1. Lecture des frames (OpenCV), toute la vidéo ou la plage choisie
     │
     ▼
 2. Transfert GPU + score de netteté (variance du Laplacien)
@@ -447,7 +493,7 @@ python scripts/compile_translations.py
 ### La vidéo ne s'ouvre pas
 
 - Vérifiez que le fichier est un AVI RAW SeeStar (non compressé)
-- Essayez de limiter le nombre de frames pour tester sur un extrait
+- Pour tester sur un extrait : *Empiler seulement la section suivante* et réglez les curseurs, ou utilisez **Limite de frames**
 
 
 

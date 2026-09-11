@@ -1,6 +1,7 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-07-21    *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
 #***********************************************
 from __future__ import annotations
 
@@ -134,6 +135,10 @@ def has_blocking_issues(issues: list[PreflightIssue]) -> bool:
 def show_preflight_dialog(app) -> bool:
     """Affiche les problèmes détectés. Retourne False si le démarrage doit être annulé."""
     from PySide6.QtWidgets import QMessageBox
+
+    from dub_planetar.theme import apply_theme
+
+    apply_theme(app)
 
     issues = collect_preflight_issues()
     if not issues:

@@ -4,6 +4,8 @@
 
 **GPU (Nvidia CUDA) Sun / Moon stacking** for RAW AVI videos captured with a **SeeStar** device (S50, S30, S30 Pro).
 
+Current version: **0.8.250** BETA.
+
 DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF image, optimized to reveal detail on the solar or lunar disk.
 
 ---
@@ -16,6 +18,7 @@ DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF i
 - [Installation (recommended — double-click)](#installation-recommended--double-click)
 - [Installation (command line)](#installation-command-line)
 - [Install packs (distribution)](#install-packs-distribution)
+- [GitHub repositories](#github-repositories)
 - [Launching](#launching)
 - [Usage](#usage)
 - [Sun and Moon profiles](#sun-and-moon-profiles)
@@ -50,6 +53,7 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 ## Features
 
 - **PySide6** (Qt) graphical interface with result preview
+- **Stacking range**: the whole video, or only a section (dual-handle timeline, start/end frame preview)
 - **100 % GPU** processing (CuPy / CUDA) — sharpness scoring, alignment, stacking, debayering
 - Preset **Sun** and **Moon** profiles with optimized settings
 - Automatic Bayer pattern detection (BGGR, GRBG, GBRG, RGGB)
@@ -99,7 +103,14 @@ DubPlanetar automates this entire pipeline on NVIDIA GPUs via CUDA, with an intu
 
 ### 2. Get DubPlanetar
 
-Download the project (GitHub ZIP → Extract) or clone the repository, then open the `dubplanetar` folder.
+Download the project from the **user** repository (GitHub ZIP → Extract) or clone it, then open the `dubplanetar` folder:
+
+```bash
+git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
+cd dubplanetar
+```
+
+See [GitHub repositories](#github-repositories) for the development vs distribution split.
 
 
 
@@ -135,8 +146,17 @@ For users comfortable with a terminal.
 
 ### 1. Clone the repository
 
+**Users** (releases judged ready to use):
+
 ```bash
 git clone https://github.com/Creations-Daniel-Dube/dubplanetar.git
+cd dubplanetar
+```
+
+**Development:**
+
+```bash
+git clone git@github.com:DarthDub66/dubplanetar.git
 cd dubplanetar
 ```
 
@@ -212,6 +232,19 @@ On the target machine: download the single `_install` archive for your OS, extra
 
 
 
+## GitHub repositories
+
+| Repository | Role |
+| ---------- | ---- |
+| [Creations-Daniel-Dube/dubplanetar](https://github.com/Creations-Daniel-Dube/dubplanetar) | **Distribution** — versions intended for users, once they are judged usable |
+| [DarthDub66/dubplanetar](https://github.com/DarthDub66/dubplanetar) | **Development** — work in progress, not necessarily ready to use |
+
+Public install packs are published on the **Creations-Daniel-Dube** repository.
+
+---
+
+
+
 ## Launching
 
 
@@ -272,10 +305,13 @@ dubplanetar
 1. **Launch** DubPlanetar
 2. **Choose the target**: ☀ Sun or ☾ Moon (loads the corresponding profile)
 3. **Select** a SeeStar RAW AVI file via *Browse…*
-4. **Adjust** settings if needed (profile defaults work in most cases)
-5. Click **Stack**
-6. Follow progress in the bar and preview on the right
-7. The `*_stacked.tiff` file is created **next to the source video**
+4. **Choose the stacking range** (under *Source video*):
+   - *Stack the entire video* (default)
+   - *Stack only the following section*: handles start at **0 %** and **100 %**; move start and/or end. The frame at the handle you move is shown in **Result preview**
+5. **Adjust** other settings if needed (profile defaults work in most cases)
+6. Click **Stack**
+7. Follow progress in the bar and preview on the right
+8. The `*_stacked.tiff` file is created **next to the source video**
 
 ---
 
@@ -301,6 +337,16 @@ Profiles preconfigure settings for each target. Your settings are saved separate
 
 
 ## Detailed settings
+
+
+
+### Stacking range
+
+- **Stack the entire video**: reads the sequence from the start (usual behaviour).
+- **Stack only the following section**: stacks only the range between the two handles.
+- The **timeline** represents the whole video. When you choose this mode (and whenever you load a new file), handles are at **0 %** (first frame) and **100 %** (last frame).
+- Moving a handle shows that frame in **Result preview**, so you can set the start or end precisely.
+- Labels show the frame number and timecode.
 
 
 
@@ -349,7 +395,7 @@ Processing runs entirely on the GPU:
 RAW AVI video
     │
     ▼
-1. Frame reading (OpenCV)
+1. Frame reading (OpenCV), whole video or the chosen range
     │
     ▼
 2. GPU transfer + sharpness score (Laplacian variance)
@@ -447,7 +493,7 @@ python scripts/compile_translations.py
 ### Video won't open
 
 - Verify the file is an uncompressed SeeStar RAW AVI
-- Try limiting the number of frames to test on a short clip
+- To test on a clip: *Stack only the following section* and set the handles, or use **Frame limit**
 
 
 
