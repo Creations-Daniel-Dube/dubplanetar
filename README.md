@@ -4,7 +4,7 @@
 
 **GPU (Nvidia CUDA) Sun / Moon stacking** for RAW AVI videos captured with a **SeeStar** device (S50, S30, S30 Pro).
 
-Current version: **0.8.200** BETA.
+Current version: **0.8.250** BETA.
 
 DubPlanetar turns a raw video sequence into a final super-resolved 16-bit TIFF image, optimized to reveal detail on the solar or lunar disk.
 
