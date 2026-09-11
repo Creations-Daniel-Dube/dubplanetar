@@ -1,4 +1,9 @@
 @echo off
+REM #***********************************************
+REM #* (c) Créations Daniel Dubé     Daniel Dubé   *
+REM #* Version  ----------------->   00.08.250     *
+REM #* Dernières Modifications -->   2026-09-11    *
+REM #***********************************************
 REM Lance DubPlanetar (double-clic). Prefere le VBS pour eviter la fenetre console.
 setlocal EnableExtensions
 cd /d "%~dp0"

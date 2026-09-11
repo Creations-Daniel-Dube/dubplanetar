@@ -1,6 +1,7 @@
 #***********************************************
 #* (c) Créations Daniel Dubé     Daniel Dubé   *
-#* Dernières Modifications -->   2026-09-10    *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
 #***********************************************
 """DubPlanetar — empilement GPU Soleil/Lune pour vidéos RAW SeeStar."""
 

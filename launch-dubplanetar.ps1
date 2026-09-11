@@ -1,4 +1,9 @@
 #Requires -Version 5.1
+#***********************************************
+#* (c) Créations Daniel Dubé     Daniel Dubé   *
+#* Version  ----------------->   00.08.250     *
+#* Dernières Modifications -->   2026-09-11    *
+#***********************************************
 <#
 .SYNOPSIS
     Lance DubPlanetar via le Python du .venv Windows (pythonw si disponible).
