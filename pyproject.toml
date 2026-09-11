@@ -1,15 +1,15 @@
 [project]
 name = "dubplanetar"
-version = "0.8.250"
+version = "0.8.251"
 description = "Empilement GPU Soleil/Lune pour vidéos RAW SeeStar (S50, S30, S30 Pro)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "PySide6>=6.6",
-    "cupy-cuda12x[ctk]>=13.0",
-    "numpy>=1.26",
-    "opencv-python-headless>=4.9",
-    "tifffile>=2024.2",
+    "PySide6>=6.11",
+    "cupy-cuda12x[ctk]>=14.0",
+    "numpy>=2.0,<2.6",
+    "opencv-python-headless>=4.10,<5",
+    "tifffile>=2025.1",
 ]
 
 [project.scripts]
