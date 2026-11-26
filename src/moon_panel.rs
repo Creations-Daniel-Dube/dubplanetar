@@ -1,12 +1,15 @@
 //! La Lune seule, aussi grande que le cadre, à l'instant partagé.
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use image::RgbaImage;
 
 use crate::animation;
 use crate::bodies::{self, Body, HeightMap};
-use crate::disk::{self, DiskInput};
 use crate::ephemeris::{self, Appearance};
 use crate::panel::Panel;
+use crate::raster_pump::{self, DiskJob, RasterPump};
 use crate::state::{self, Observation};
 
 const HEADER_H: f32 = 118.0;
@@ -20,11 +23,13 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
 pub struct MoonPanel {
     map_stamp: Option<(u64, u64)>,
     map_loaded: bool,
-    map: Option<RgbaImage>,
+    map: Option<Arc<RgbaImage>>,
     bump_stamp: Option<(u64, u64)>,
     bump_loaded: bool,
-    bump: Option<HeightMap>,
+    bump: Option<Arc<HeightMap>>,
     raster: Option<Cached>,
+    pump: RasterPump,
+    requested: Option<(u64, RasterKey)>,
 }
 
 impl Default for MoonPanel {
@@ -37,6 +42,8 @@ impl Default for MoonPanel {
             bump_loaded: false,
             bump: None,
             raster: None,
+            pump: RasterPump::new(),
+            requested: None,
         }
     }
 }
@@ -94,56 +101,74 @@ impl Panel for MoonPanel {
             .round()
             .max(1.0) as i32;
         let minute = (jd * 1440.0).round() as i64;
-        self.ensure(ui.ctx(), &app, minute, radius_px, observation.north_down);
+        let busy = self.sync(ui.ctx(), &app, minute, radius_px, observation.north_down);
+        if busy {
+            observation.waiting_for_image = true;
+            ui.ctx().request_repaint_after(Duration::from_millis(40));
+        }
 
-        let cached = self
-            .raster
-            .as_ref()
-            .expect("le disque vient d'être préparé");
-        let [w, h] = cached.texture.size();
-        let ppp_f = ui.ctx().pixels_per_point();
-        let display = egui::vec2(w as f32 / ppp_f, h as f32 / ppp_f);
-        let center = room.center();
-        let image_rect = egui::Rect::from_center_size(center, display);
-        let response = ui.put(
-            image_rect,
-            egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
-        );
-        response.on_hover_text(tooltip(&app));
+        if let Some(cached) = self.raster.as_ref() {
+            let [w, h] = cached.texture.size();
+            let ppp_f = ui.ctx().pixels_per_point();
+            let display = egui::vec2(w as f32 / ppp_f, h as f32 / ppp_f);
+            let center = room.center();
+            let image_rect = egui::Rect::from_center_size(center, display);
+            let response = ui.put(
+                image_rect,
+                egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
+            );
+            response.on_hover_text(tooltip(&app));
+        }
         paint_labels(&painter, content, &app);
+        if busy {
+            raster_pump::paint_busy(ui.painter(), content);
+        }
         animation::bar(ui, observation, full);
     }
 }
 
 impl MoonPanel {
-    fn map_image(&mut self, stamp: Option<(u64, u64)>) -> Option<&RgbaImage> {
+    fn map_image(&mut self, stamp: Option<(u64, u64)>) -> Option<Arc<RgbaImage>> {
         if self.map_loaded && self.map_stamp == stamp {
-            return self.map.as_ref();
+            return self.map.clone();
         }
-        self.map = stamp.and_then(|_| bodies::load_texture(Body::Moon));
+        self.map = stamp
+            .and_then(|_| bodies::load_texture(Body::Moon))
+            .map(Arc::new);
         self.map_stamp = stamp;
         self.map_loaded = true;
-        self.map.as_ref()
+        self.map.clone()
     }
 
-    fn bump_image(&mut self, stamp: Option<(u64, u64)>) -> Option<&HeightMap> {
+    fn bump_image(&mut self, stamp: Option<(u64, u64)>) -> Option<Arc<HeightMap>> {
         if self.bump_loaded && self.bump_stamp == stamp {
-            return self.bump.as_ref();
+            return self.bump.clone();
         }
-        self.bump = stamp.and_then(|_| bodies::load_bump(Body::Moon));
+        self.bump = stamp
+            .and_then(|_| bodies::load_bump(Body::Moon))
+            .map(Arc::new);
         self.bump_stamp = stamp;
         self.bump_loaded = true;
-        self.bump.as_ref()
+        self.bump.clone()
     }
 
-    fn ensure(
+    fn sync(
         &mut self,
         ctx: &egui::Context,
         app: &Appearance,
         minute: i64,
         radius_px: i32,
         north_down: bool,
-    ) {
+    ) -> bool {
+        for done in self.pump.poll() {
+            let Some((token, key)) = self.requested.clone() else {
+                continue;
+            };
+            if done.token == token {
+                self.install(ctx, key, north_down, done.image);
+            }
+        }
+
         let stamp = bodies::texture_stamp(Body::Moon);
         let bump_stamp = bodies::bump_stamp(Body::Moon);
         let key = RasterKey {
@@ -152,36 +177,50 @@ impl MoonPanel {
             stamp,
             bump: bump_stamp,
         };
-        if let Some(cached) = &self.raster {
-            if cached.key == key && cached.north_down == north_down {
-                return;
+        if let Some(cached) = &mut self.raster {
+            if cached.key == key {
+                if cached.north_down != north_down {
+                    let color = color_image(&cached.north_up, north_down);
+                    cached.texture.set(color, egui::TextureOptions::LINEAR);
+                    cached.north_down = north_down;
+                }
+                return false;
             }
         }
-        let reused = self
-            .raster
+        let already = self
+            .requested
             .as_ref()
-            .filter(|cached| cached.key == key)
-            .map(|cached| cached.north_up.clone());
-        let north_up = if let Some(image) = reused {
-            image
-        } else {
-            let texture = self.map_image(stamp).cloned();
-            let bump = self.bump_image(bump_stamp).cloned();
-            disk::render_disk(
-                &DiskInput {
-                    orientation: &app.orientation,
-                    flattening: app.flattening,
-                    albedo: Body::Moon.albedo(),
-                    texture: texture.as_ref(),
-                    lon_offset_turns: Body::Moon.texture_lon_offset(),
-                    bump: bump.as_ref(),
-                    rings: &[],
-                    draw_axis: true,
-                },
-                f64::from(radius_px),
-                MAX_SIDE,
-            )
-        };
+            .is_some_and(|(_, requested)| requested == &key);
+        if !already {
+            let token = self.pump.bump_token();
+            let texture = self.map_image(stamp);
+            let bump = self.bump_image(bump_stamp);
+            self.pump.submit(DiskJob {
+                token,
+                id: 0,
+                orientation: app.orientation,
+                flattening: app.flattening,
+                albedo: Body::Moon.albedo(),
+                texture,
+                lon_offset_turns: Body::Moon.texture_lon_offset(),
+                bump,
+                rings: &[],
+                draw_axis: true,
+                radius_px: f64::from(radius_px),
+                max_side: MAX_SIDE,
+            });
+            self.requested = Some((token, key));
+        }
+        true
+    }
+
+    fn install(
+        &mut self,
+        ctx: &egui::Context,
+        key: RasterKey,
+        north_down: bool,
+        north_up: RgbaImage,
+    ) {
         let color = color_image(&north_up, north_down);
         if let Some(cached) = &mut self.raster {
             cached.texture.set(color, egui::TextureOptions::LINEAR);

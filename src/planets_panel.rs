@@ -1,14 +1,16 @@
 //! Mercure à Neptune, à la même échelle angulaire, à un instant donné.
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
 
 use image::RgbaImage;
 
 use crate::animation;
 use crate::bodies::{self, Body};
-use crate::disk::{self, DiskInput};
 use crate::ephemeris::{self, Appearance};
 use crate::panel::Panel;
+use crate::raster_pump::{self, DiskJob, RasterPump};
 use crate::state::Observation;
 
 const HEADER_H: f32 = 118.0;
@@ -19,14 +21,30 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
 
 pub struct PlanetsPanel {
     cache: HashMap<Body, Cached>,
+    maps: HashMap<Body, StoredMap>,
+    pump: RasterPump,
+    requested: Option<Requested>,
 }
 
 impl Default for PlanetsPanel {
     fn default() -> Self {
         Self {
             cache: HashMap::new(),
+            maps: HashMap::new(),
+            pump: RasterPump::new(),
+            requested: None,
         }
     }
+}
+
+struct Requested {
+    token: u64,
+    keys: HashMap<Body, RasterKey>,
+}
+
+struct StoredMap {
+    stamp: Option<(u64, u64)>,
+    image: Option<Arc<RgbaImage>>,
 }
 
 struct Cached {
@@ -102,79 +120,145 @@ impl Panel for PlanetsPanel {
         );
 
         let minute = (jd * 1440.0).round() as i64;
+        let mut specs = Vec::new();
         for (slot, (body, app)) in slots.iter().zip(views.iter()) {
             let radius_px = (app.eq_diameter_arcsec * 0.5 * scale * ppp)
                 .round()
                 .max(1.0) as i32;
-            self.ensure(
-                ui.ctx(),
-                *body,
-                app,
-                minute,
-                radius_px,
-                observation.north_down,
-            );
-            let cached = &self.cache[body];
-            let [w, h] = cached.texture.size();
-            let ppp_f = ui.ctx().pixels_per_point();
-            let display = egui::vec2(w as f32 / ppp_f, h as f32 / ppp_f);
-            let (_, area_h) = image_room(slot.rect);
-            let center = egui::pos2(slot.rect.center().x, slot.rect.top() + 4.0 + area_h * 0.5);
-            let image_rect = egui::Rect::from_center_size(center, display);
-            let response = ui.put(
-                image_rect,
-                egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
-            );
-            response.on_hover_text(tooltip(app));
+            specs.push((*body, *app, radius_px, slot));
+        }
+        let busy = self.sync(ui.ctx(), &specs, minute, observation.north_down);
+        if busy {
+            observation.waiting_for_image = true;
+            ui.ctx().request_repaint_after(Duration::from_millis(40));
+        }
+        for (body, app, _, slot) in &specs {
+            if let Some(cached) = self.cache.get(body) {
+                let [w, h] = cached.texture.size();
+                let ppp_f = ui.ctx().pixels_per_point();
+                let display = egui::vec2(w as f32 / ppp_f, h as f32 / ppp_f);
+                let (_, area_h) = image_room(slot.rect);
+                let center = egui::pos2(slot.rect.center().x, slot.rect.top() + 4.0 + area_h * 0.5);
+                let image_rect = egui::Rect::from_center_size(center, display);
+                let response = ui.put(
+                    image_rect,
+                    egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
+                );
+                response.on_hover_text(tooltip(app));
+            }
             paint_labels(&painter, slot, app);
+        }
+        if busy {
+            raster_pump::paint_busy(ui.painter(), content);
         }
         animation::bar(ui, observation, full);
     }
 }
 
 impl PlanetsPanel {
-    fn ensure(
+    fn sync(
         &mut self,
         ctx: &egui::Context,
-        body: Body,
-        app: &Appearance,
+        specs: &[(Body, Appearance, i32, &Slot)],
         minute: i64,
-        radius_px: i32,
         north_down: bool,
-    ) {
-        let stamp = bodies::texture_stamp(body);
-        let key = RasterKey {
-            minute,
-            radius_px,
-            stamp,
-        };
-        if let Some(cached) = self.cache.get(&body) {
-            if cached.key == key && cached.north_down == north_down {
-                return;
-            }
+    ) -> bool {
+        let ready = self.pump.poll();
+        for done in ready {
+            let Some(body) = body_from_id(done.id) else {
+                continue;
+            };
+            let Some(key) = self
+                .requested
+                .as_ref()
+                .filter(|requested| requested.token == done.token)
+                .and_then(|requested| requested.keys.get(&body))
+                .cloned()
+            else {
+                continue;
+            };
+            self.install(ctx, body, key, north_down, done.image);
         }
-        let reused = self
-            .cache
-            .get(&body)
-            .filter(|cached| cached.key == key)
-            .map(|cached| cached.north_up.clone());
-        let north_up = reused.unwrap_or_else(|| {
-            let texture = stamp.and_then(|_| bodies::load_texture(body));
-            disk::render_disk(
-                &DiskInput {
-                    orientation: &app.orientation,
+
+        let mut missing = Vec::new();
+        for (body, app, radius_px, _) in specs {
+            let stamp = bodies::texture_stamp(*body);
+            let key = RasterKey {
+                minute,
+                radius_px: *radius_px,
+                stamp,
+            };
+            if let Some(cached) = self.cache.get_mut(body) {
+                if cached.key == key {
+                    if cached.north_down != north_down {
+                        let color = color_image(&cached.north_up, north_down);
+                        cached.texture.set(color, egui::TextureOptions::LINEAR);
+                        cached.north_down = north_down;
+                    }
+                    continue;
+                }
+            }
+            missing.push((*body, key, *app, *radius_px));
+        }
+        if missing.is_empty() {
+            return false;
+        }
+        let already = self.requested.as_ref().is_some_and(|requested| {
+            missing
+                .iter()
+                .all(|(body, key, _, _)| requested.keys.get(body) == Some(key))
+        });
+        if !already {
+            let token = self.pump.bump_token();
+            let mut keys = HashMap::new();
+            for (body, key, app, radius_px) in &missing {
+                let texture = self.map_for(*body, key.stamp);
+                keys.insert(*body, key.clone());
+                self.pump.submit(DiskJob {
+                    token,
+                    id: body_id(*body),
+                    orientation: app.orientation,
                     flattening: app.flattening,
                     albedo: body.albedo(),
-                    texture: texture.as_ref(),
+                    texture,
                     lon_offset_turns: body.texture_lon_offset(),
                     bump: None,
                     rings: body.ring_zones(),
                     draw_axis: true,
-                },
-                f64::from(radius_px),
-                1000,
-            )
-        });
+                    radius_px: f64::from(*radius_px),
+                    max_side: 1000,
+                });
+            }
+            self.requested = Some(Requested { token, keys });
+        }
+        true
+    }
+
+    fn map_for(&mut self, body: Body, stamp: Option<(u64, u64)>) -> Option<Arc<RgbaImage>> {
+        if let Some(stored) = self.maps.get(&body) {
+            if stored.stamp == stamp {
+                return stored.image.clone();
+            }
+        }
+        let image = stamp.and_then(|_| bodies::load_texture(body)).map(Arc::new);
+        self.maps.insert(
+            body,
+            StoredMap {
+                stamp,
+                image: image.clone(),
+            },
+        );
+        image
+    }
+
+    fn install(
+        &mut self,
+        ctx: &egui::Context,
+        body: Body,
+        key: RasterKey,
+        north_down: bool,
+        north_up: RgbaImage,
+    ) {
         let color = color_image(&north_up, north_down);
         if let Some(cached) = self.cache.get_mut(&body) {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
@@ -198,6 +282,33 @@ impl PlanetsPanel {
             );
         }
     }
+}
+
+fn body_id(body: Body) -> u64 {
+    match body {
+        Body::Mercury => 0,
+        Body::Venus => 1,
+        Body::Mars => 2,
+        Body::Jupiter => 3,
+        Body::Saturn => 4,
+        Body::Uranus => 5,
+        Body::Neptune => 6,
+        Body::Moon => 7,
+    }
+}
+
+fn body_from_id(id: u64) -> Option<Body> {
+    Some(match id {
+        0 => Body::Mercury,
+        1 => Body::Venus,
+        2 => Body::Mars,
+        3 => Body::Jupiter,
+        4 => Body::Saturn,
+        5 => Body::Uranus,
+        6 => Body::Neptune,
+        7 => Body::Moon,
+        _ => return None,
+    })
 }
 
 fn color_image(north_up: &RgbaImage, north_down: bool) -> egui::ColorImage {

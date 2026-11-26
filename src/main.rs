@@ -7,6 +7,7 @@ mod ephemeris;
 mod moon_panel;
 mod panel;
 mod planets_panel;
+mod raster_pump;
 mod state;
 mod time_panel;
 
@@ -71,6 +72,7 @@ impl eframe::App for DubPlanetar {
             .show(ui, |ui| menu(ui, &entries, &mut current));
         self.current = current;
 
+        self.observation.waiting_for_image = false;
         let sky = Color32::from_rgb(0, 0, 52);
         egui::CentralPanel::default()
             .frame(egui::Frame::central_panel(ui.style()).fill(sky))

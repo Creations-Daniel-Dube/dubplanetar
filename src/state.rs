@@ -63,6 +63,8 @@ pub struct Observation {
     pub step_unit: StepUnit,
     /// Instant où le prochain pas est dû. `None` quand la lecture est arrêtée.
     pub next_step: Option<std::time::Instant>,
+    /// La vue visible attend encore le disque de l'instant courant.
+    pub waiting_for_image: bool,
 }
 
 impl Observation {
@@ -74,6 +76,7 @@ impl Observation {
             step_amount: 1,
             step_unit: StepUnit::Days,
             next_step: None,
+            waiting_for_image: false,
         }
     }
 }

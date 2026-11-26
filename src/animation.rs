@@ -23,6 +23,10 @@ pub fn tick(ctx: &egui::Context, observation: &mut Observation) {
     if observation.playback == Playback::Stopped {
         return;
     }
+    if observation.waiting_for_image {
+        ctx.request_repaint_after(Duration::from_millis(40));
+        return;
+    }
     let now = Instant::now();
     if let Some(due) = observation.next_step {
         if now < due {
@@ -152,6 +156,10 @@ pub fn bar(ui: &mut egui::Ui, observation: &mut Observation, full: egui::Rect) {
     {
         start(observation, Playback::Forward, bar_ui.ctx());
     }
+    if pill(&mut bar_ui, "1 fois", false).clicked() {
+        once(observation);
+        bar_ui.ctx().request_repaint();
+    }
     if pill(&mut bar_ui, "Arrêt", false).clicked() {
         observation.playback = Playback::Stopped;
         observation.next_step = None;
@@ -178,6 +186,20 @@ pub fn bar(ui: &mut egui::Ui, observation: &mut Observation, full: egui::Rect) {
     if unit != observation.step_unit {
         observation.step_unit = unit;
         observation.step_amount = observation.step_amount.clamp(1, unit.max_amount());
+    }
+}
+
+/// Un seul pas en avant, sans lancer la lecture.
+fn once(observation: &mut Observation) {
+    observation.playback = Playback::Stopped;
+    observation.next_step = None;
+    if let Some(next) = step_time(
+        observation.when,
+        observation.step_amount,
+        observation.step_unit,
+        false,
+    ) {
+        observation.when = next;
     }
 }
 
