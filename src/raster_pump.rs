@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
 
 use image::RgbaImage;
 
@@ -51,6 +50,8 @@ pub struct RasterPump {
     wake: Arc<Condvar>,
     done_rx: std::sync::mpsc::Receiver<DiskDone>,
     current_token: u64,
+    /// Compteur lu seulement par les tests, pour attendre la fin d'un dessin.
+    #[cfg(test)]
     completed: Arc<AtomicU64>,
     join: Option<JoinHandle<()>>,
 }
@@ -63,10 +64,14 @@ impl RasterPump {
         }));
         let wake = Arc::new(Condvar::new());
         let (done_tx, done_rx) = std::sync::mpsc::channel();
+        #[cfg(test)]
         let completed = Arc::new(AtomicU64::new(0));
+        #[cfg(test)]
+        let completed_thread = Some(Arc::clone(&completed));
+        #[cfg(not(test))]
+        let completed_thread = None;
         let queue_thread = Arc::clone(&queue);
         let wake_thread = Arc::clone(&wake);
-        let completed_thread = Arc::clone(&completed);
         let join = std::thread::Builder::new()
             .name("raster".to_owned())
             .spawn(move || worker(queue_thread, wake_thread, done_tx, completed_thread))
@@ -76,6 +81,7 @@ impl RasterPump {
             wake,
             done_rx,
             current_token: 0,
+            #[cfg(test)]
             completed,
             join: Some(join),
         }
@@ -126,7 +132,7 @@ fn worker(
     queue: Arc<Mutex<Queue>>,
     wake: Arc<Condvar>,
     done_tx: std::sync::mpsc::Sender<DiskDone>,
-    completed: Arc<AtomicU64>,
+    completed: Option<Arc<AtomicU64>>,
 ) {
     loop {
         let job = {
@@ -160,7 +166,9 @@ fn worker(
         {
             return;
         }
-        completed.fetch_add(1, Ordering::Relaxed);
+        if let Some(completed) = &completed {
+            completed.fetch_add(1, Ordering::Relaxed);
+        }
     }
 }
 
@@ -238,7 +246,7 @@ pub fn paint_busy(painter: &egui::Painter, area: egui::Rect) {
 mod tests {
     use super::*;
     use crate::ephemeris::{Orientation, Vec3};
-    use std::time::Instant;
+    use std::time::{Duration, Instant};
 
     fn plain_job(token: u64, id: u64) -> DiskJob {
         DiskJob {

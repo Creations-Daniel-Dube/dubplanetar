@@ -21,6 +21,7 @@ pub enum Body {
 }
 
 impl Body {
+    #[cfg(test)]
     pub const ALL: [Body; 7] = [
         Body::Mercury,
         Body::Venus,
