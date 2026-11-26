@@ -19,7 +19,7 @@ pub const MONTHS: [&str; 12] = [
 
 pub struct Observation {
     pub when: DateTime<Local>,
-    /// Nord céleste vers le bas, comme dans un télescope sans renvoi coudé.
+    /// Si vrai, le nord céleste est affiché vers le bas (comme dans un télescope).
     pub north_down: bool,
 }
 
@@ -27,7 +27,7 @@ impl Observation {
     pub fn new() -> Self {
         Self {
             when: truncate_minute(Local::now()),
-            north_down: true,
+            north_down: false,
         }
     }
 }

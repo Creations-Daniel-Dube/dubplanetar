@@ -98,21 +98,4 @@ fn menu(ui: &mut egui::Ui, entries: &[(&'static str, &'static str)], current: &m
         });
         ui.add_space(4.0);
     }
-    ui.add_space(18.0);
-    let note = egui::RichText::new(
-        "Un onglet s'ajoute au registre des panneaux.\n\n\
-         Photos optionnelles, dans assets/textures :\n\
-         mercury.png, venus.png, mars.png,\n\
-         jupiter.png, saturn.png,\n\
-         uranus.png, neptune.png, moon.png\n\n\
-         Carte équirectangulaire, nord en haut.\n\
-         Planètes : longitude 0° à gauche.\n\
-         Lune : longitude 0° au centre.\n\
-         Relief optionnel : moon_bump.png,\n\
-         niveaux de gris, plus clair = plus haut.\n\
-         Sans fichier, le disque reste d'une couleur unie.",
-    )
-    .size(12.0)
-    .color(Color32::from_rgb(160, 170, 188));
-    ui.label(note);
 }

@@ -1,6 +1,6 @@
 # dubPlanetar — Planètes à l'échelle
 
-**Version 0.1.0 BETA**
+**Version 0.1.500 BETA**
 
 Application de bureau pour visualiser les planètes et la Lune telles qu'elles apparaîtraient dans un télescope, à un instant donné, avec les vraies tailles angulaires et les phases d'éclairage.
 
@@ -23,8 +23,6 @@ Trois entrées mènent aux parties du logiciel :
 | **Date et heure** | Choisir l'instant de l'observation (partagé par toutes les vues). |
 | **Planètes à l'échelle** | Mercure à Neptune sur une même échelle en secondes d'arc. |
 | **Lune** | La Lune seule, en grand sur tout l'écran. |
-
-Une courte note en bas du menu rappelle comment ajouter des photos optionnelles (voir plus bas).
 
 ### Date et heure
 
@@ -70,8 +68,8 @@ Cette vue imite une page de revue d'astronomie : **toutes les planètes du Syst�
 
 **Case à cocher — Nord vers le bas**
 
-- Cochée (par défaut) : comme dans un télescope astronomique inversé, **le Nord est vers le bas** à l'écran ; les textes restent lisibles.
-- Décochée : **le Nord est vers le haut** (convention carte / photographie).
+- Décochée (par défaut) : **le Nord est vers le haut** (convention carte / photographie).
+- Cochée : comme dans un télescope astronomique inversé, **le Nord est vers le bas** à l'écran ; les textes restent lisibles.
 
 **Survol de la souris**
 
@@ -136,8 +134,6 @@ Open **Planètes à l'échelle** (*Planets at scale*). The window has a left-han
 | **Planètes à l'échelle** | Mercury through Neptune on one arcsecond scale. |
 | **Lune** | The Moon alone, large on screen. |
 
-A short note at the bottom of the menu explains optional custom images (see below).
-
 ### Date and time
 
 This is the **shared clock** for the app. Whatever you set here applies at once to the planets view and the Moon view.
@@ -182,8 +178,8 @@ All **major planets (Mercury to Neptune) at one instant**, on a **common scale i
 
 **Checkbox — Nord vers le bas** (*North down*)
 
-- Checked (default): **north at the bottom**, as in many astronomical telescopes; labels stay upright.
-- Unchecked: **north at the top** (chart / photo convention).
+- Unchecked (default): **north at the top** (chart / photo convention).
+- Checked: **north at the bottom**, as in many astronomical telescopes; labels stay upright.
 
 **Mouse hover**
 
