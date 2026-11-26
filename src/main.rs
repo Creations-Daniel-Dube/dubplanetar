@@ -16,18 +16,26 @@ use moon_panel::MoonPanel;
 use panel::Panel;
 use planets_panel::PlanetsPanel;
 use state::Observation;
+use std::sync::Arc;
 use time_panel::DatePanel;
 
+const TITLE: &str = concat!("dubPlanetar v", env!("CARGO_PKG_VERSION"));
+
 fn main() -> eframe::Result {
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1380.0, 860.0])
+        .with_min_inner_size([960.0, 640.0])
+        .with_title(TITLE);
+    if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../images/dubPlanetar.png"))
+    {
+        viewport = viewport.with_icon(Arc::new(icon));
+    }
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1380.0, 860.0])
-            .with_min_inner_size([960.0, 640.0])
-            .with_title("Planètes à l'échelle"),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(
-        "Planètes à l'échelle",
+        "dubPlanetar",
         options,
         Box::new(|cc| Ok(Box::new(DubPlanetar::new(cc)))),
     )

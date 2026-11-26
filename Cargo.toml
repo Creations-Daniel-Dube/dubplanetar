@@ -1,6 +1,6 @@
 [package]
 name = "dubPlanetar"
-version = "0.2.860"
+version = "(0.3.1060)"
 edition = "2024"
 
 [dependencies]
@@ -9,3 +9,6 @@ eframe = "0.37.0"
 egui = "0.37.0"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
 vsop87 = "3.0.0"
+
+[build-dependencies]
+winres = "0.1"

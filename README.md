@@ -77,7 +77,7 @@ Passez la souris sur un disque pour un encadré détaillé : distance en unités
 
 ### Lune
 
-Même date et heure que les planètes, mais **un seul disque** occupant le plus grand espace possible.
+Même date et heure que les planètes, mais **un seul disque**, aussi grand que le cadre le permet. Une Lune de **35′** le remplit ; plus elle est loin, plus le disque rétrécit (super-Lune près du périgée, plus petite à l’apogée).
 
 **En-tête** : titre, date, orientation du Nord (même case à cocher que pour les planètes).
 
@@ -200,7 +200,7 @@ Tooltip on each disk: distance (AU), diameter, illuminated %, phase angle, sub-E
 
 ### Moon
 
-Same date and time as the planets, with a **single large disk**.
+Same date and time as the planets, with a **single disk** as large as the frame allows. A Moon of **35′** fills it; a more distant Moon is drawn smaller (a supermoon near perigee, a smaller one at apogee).
 
 **Header**: title, date, same north checkbox.
 

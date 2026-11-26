@@ -19,6 +19,8 @@ const MAX_SIDE: i32 = 1800;
 const SKY_GREEN: egui::Color32 = egui::Color32::from_rgb(40, 220, 80);
 const LABEL: egui::Color32 = egui::Color32::from_rgb(235, 235, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
+/// Diamètre angulaire qui remplit le cadre : 35′.
+const FRAME_ARCSEC: f64 = 35.0 * 60.0;
 
 pub struct MoonPanel {
     map_stamp: Option<(u64, u64)>,
@@ -97,9 +99,7 @@ impl Panel for MoonPanel {
         let room = image_room(content);
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let side_px = f64::from(room.width().min(room.height())) * ppp;
-        let radius_px = (side_px * 0.5 / Body::Moon.canvas_extent())
-            .round()
-            .max(1.0) as i32;
+        let radius_px = moon_radius_px(side_px, app.eq_diameter_arcsec);
         let minute = (jd * 1440.0).round() as i64;
         let busy = self.sync(ui.ctx(), &app, minute, radius_px, observation.north_down);
         if busy {
@@ -128,30 +128,6 @@ impl Panel for MoonPanel {
 }
 
 impl MoonPanel {
-    fn map_image(&mut self, stamp: Option<(u64, u64)>) -> Option<Arc<RgbaImage>> {
-        if self.map_loaded && self.map_stamp == stamp {
-            return self.map.clone();
-        }
-        self.map = stamp
-            .and_then(|_| bodies::load_texture(Body::Moon))
-            .map(Arc::new);
-        self.map_stamp = stamp;
-        self.map_loaded = true;
-        self.map.clone()
-    }
-
-    fn bump_image(&mut self, stamp: Option<(u64, u64)>) -> Option<Arc<HeightMap>> {
-        if self.bump_loaded && self.bump_stamp == stamp {
-            return self.bump.clone();
-        }
-        self.bump = stamp
-            .and_then(|_| bodies::load_bump(Body::Moon))
-            .map(Arc::new);
-        self.bump_stamp = stamp;
-        self.bump_loaded = true;
-        self.bump.clone()
-    }
-
     fn sync(
         &mut self,
         ctx: &egui::Context,
@@ -165,6 +141,12 @@ impl MoonPanel {
                 continue;
             };
             if done.token == token {
+                self.map = done.loaded_texture.clone();
+                self.map_stamp = key.stamp;
+                self.map_loaded = true;
+                self.bump = done.loaded_bump.clone();
+                self.bump_stamp = key.bump;
+                self.bump_loaded = true;
                 self.install(ctx, key, north_down, done.image);
             }
         }
@@ -193,8 +175,24 @@ impl MoonPanel {
             .is_some_and(|(_, requested)| requested == &key);
         if !already {
             let token = self.pump.bump_token();
-            let texture = self.map_image(stamp);
-            let bump = self.bump_image(bump_stamp);
+            let texture_ready = self.map_loaded && self.map_stamp == stamp;
+            let bump_ready = self.bump_loaded && self.bump_stamp == bump_stamp;
+            let texture = if texture_ready {
+                self.map.clone()
+            } else {
+                None
+            };
+            let bump = if bump_ready { self.bump.clone() } else { None };
+            let texture_path = if texture_ready {
+                None
+            } else {
+                bodies::texture_file(Body::Moon)
+            };
+            let bump_path = if bump_ready {
+                None
+            } else {
+                bodies::bump_file(Body::Moon)
+            };
             self.pump.submit(DiskJob {
                 token,
                 id: 0,
@@ -202,8 +200,10 @@ impl MoonPanel {
                 flattening: app.flattening,
                 albedo: Body::Moon.albedo(),
                 texture,
+                texture_path,
                 lon_offset_turns: Body::Moon.texture_lon_offset(),
                 bump,
+                bump_path,
                 rings: &[],
                 draw_axis: true,
                 radius_px: f64::from(radius_px),
@@ -237,6 +237,13 @@ impl MoonPanel {
             });
         }
     }
+}
+
+fn moon_radius_px(room_side_px: f64, diameter_arcsec: f64) -> i32 {
+    let span = (diameter_arcsec / FRAME_ARCSEC).clamp(0.05, 1.0);
+    (room_side_px * 0.5 / Body::Moon.canvas_extent() * span)
+        .round()
+        .max(1.0) as i32
 }
 
 fn image_room(full: egui::Rect) -> egui::Rect {
@@ -342,4 +349,27 @@ fn flip_180(src: &RgbaImage) -> RgbaImage {
         }
     }
     dst
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_35_arcmin_moon_fills_the_frame() {
+        let room = 1_220.0;
+        let full = (room * 0.5 / Body::Moon.canvas_extent()).round() as i32;
+        assert_eq!(moon_radius_px(room, FRAME_ARCSEC), full);
+    }
+
+    #[test]
+    fn radius_follows_the_angular_diameter() {
+        let room = 1_220.0;
+        let full = moon_radius_px(room, FRAME_ARCSEC) as f64;
+        let near = moon_radius_px(room, 1_980.0);
+        let far = moon_radius_px(room, 1_740.0);
+        assert!(near > far);
+        assert_eq!(near, (full * 1_980.0 / FRAME_ARCSEC).round() as i32);
+        assert_eq!(far, (full * 1_740.0 / FRAME_ARCSEC).round() as i32);
+    }
 }

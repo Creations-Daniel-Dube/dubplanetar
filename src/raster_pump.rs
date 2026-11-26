@@ -2,6 +2,7 @@
 //! Un seul disque à la fois : un pas plus récent chasse ceux qui attendent.
 
 use std::collections::VecDeque;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
@@ -20,8 +21,12 @@ pub struct DiskJob {
     pub flattening: f64,
     pub albedo: [u8; 3],
     pub texture: Option<Arc<RgbaImage>>,
+    /// Chargée sur le fil de rendu si `texture` est vide.
+    pub texture_path: Option<PathBuf>,
     pub lon_offset_turns: f64,
     pub bump: Option<Arc<HeightMap>>,
+    /// Chargée sur le fil de rendu si `bump` est vide.
+    pub bump_path: Option<PathBuf>,
     pub rings: &'static [RingZone],
     pub draw_axis: bool,
     pub radius_px: f64,
@@ -32,6 +37,8 @@ pub struct DiskDone {
     pub token: u64,
     pub id: u64,
     pub image: RgbaImage,
+    pub loaded_texture: Option<Arc<RgbaImage>>,
+    pub loaded_bump: Option<Arc<HeightMap>>,
 }
 
 struct Queue {
@@ -136,8 +143,21 @@ fn worker(
         };
         let token = job.token;
         let id = job.id;
+        let mut job = job;
+        resolve_maps(&mut job);
+        let loaded_texture = job.texture.clone();
+        let loaded_bump = job.bump.clone();
         let image = render(&job);
-        if done_tx.send(DiskDone { token, id, image }).is_err() {
+        if done_tx
+            .send(DiskDone {
+                token,
+                id,
+                image,
+                loaded_texture,
+                loaded_bump,
+            })
+            .is_err()
+        {
             return;
         }
         completed.fetch_add(1, Ordering::Relaxed);
@@ -149,6 +169,25 @@ fn next_job(jobs: &mut VecDeque<DiskJob>) -> Option<DiskJob> {
     let latest = jobs.iter().map(|job| job.token).max()?;
     jobs.retain(|job| job.token == latest);
     jobs.pop_front()
+}
+
+fn resolve_maps(job: &mut DiskJob) {
+    if job.texture.is_none() {
+        if let Some(path) = job.texture_path.take() {
+            match crate::bodies::load_path(&path) {
+                Some(image) => job.texture = Some(Arc::new(image)),
+                None => eprintln!("Photo illisible : {}", path.display()),
+            }
+        }
+    }
+    if job.bump.is_none() {
+        if let Some(path) = job.bump_path.take() {
+            match crate::bodies::load_bump_file(&path) {
+                Some(map) => job.bump = Some(Arc::new(map)),
+                None => eprintln!("Relief illisible : {}", path.display()),
+            }
+        }
+    }
 }
 
 fn render(job: &DiskJob) -> RgbaImage {
@@ -215,8 +254,10 @@ mod tests {
             flattening: 0.0,
             albedo: [180, 40, 40],
             texture: None,
+            texture_path: None,
             lon_offset_turns: 0.0,
             bump: None,
+            bump_path: None,
             rings: &[],
             draw_axis: false,
             radius_px: 8.0,

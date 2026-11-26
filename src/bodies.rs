@@ -260,16 +260,8 @@ pub fn bump_stamp(body: Body) -> Option<(u64, u64)> {
     Some((secs, meta.len()))
 }
 
-/// Niveaux de gris, 8 ou 16 bits. Plus clair = plus haut.
-pub fn load_bump(body: Body) -> Option<HeightMap> {
-    let path = bump_file(body)?;
-    let img = match image::open(&path) {
-        Ok(img) => img,
-        Err(_) => {
-            eprintln!("Relief illisible : {}", path.display());
-            return None;
-        }
-    };
+pub fn load_bump_file(path: &Path) -> Option<HeightMap> {
+    let img = image::open(path).ok()?;
     let gray = img.to_luma16();
     let (width, height) = gray.dimensions();
     if width == 0 || height == 0 {
