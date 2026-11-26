@@ -35,7 +35,7 @@ impl Panel for DatePanel {
             .spacing(egui::vec2(18.0, 12.0))
             .show(ui, |ui| {
                 ui.label("Année");
-                ui.add(egui::DragValue::new(&mut year).range(1000..=2500));
+                ui.add(egui::DragValue::new(&mut year).range(state::YEAR_MIN..=state::YEAR_MAX));
                 ui.end_row();
 
                 ui.label("Mois");

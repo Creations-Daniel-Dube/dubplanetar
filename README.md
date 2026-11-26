@@ -87,6 +87,16 @@ Même date et heure que les planètes, mais **un seul disque** occupant le plus 
 
 **Survol** : distance en kilomètres, diamètre en minutes d'arc, % éclairé, phase, latitude sous-terrestre.
 
+### Animation
+
+En bas des vues **Planètes à l'échelle** et **Lune**, le bandeau **Animation** fait défiler la date commune.
+
+- **Lecture** avance, **Reculer** recule, **Arrêt** fige l'instant. Le sens en cours est en vert. Le premier pas part tout de suite, puis un pas toutes les 0,7 s.
+- **Saut** : un nombre et une unité. Jours de 1 à 365, mois de 1 à 12, années de 1 à 10.
+- L'heure et la minute ne changent pas. Un 31 ramené dans un mois plus court tombe sur le dernier jour de ce mois.
+- La lecture s'arrête à l'an 1000 et à l'an 2500.
+- L'onglet **Date et heure** n'a pas de bandeau, mais il montre l'instant pendant la lecture. Changer d'onglet ne l'arrête pas.
+
 ### Images optionnelles
 
 Le logiciel **n'inclut pas** de photos NASA dans le dépôt. Vous pouvez enrichir l'affichage en plaçant des fichiers image dans le dossier **`assets/textures`** à côté du programme (ou du dossier de travail habituel).
@@ -117,6 +127,7 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 2. Ouvrez **Planètes à l'échelle** pour comparer les tailles et phases.
 3. Ouvrez **Lune** pour le détail lunaire.
 4. Cochez ou décochez **Nord vers le bas** selon votre habitude d'observation.
+5. Dans **Animation**, choisissez le saut, puis **Lecture** ou **Reculer**.
 
 ---
 
@@ -197,6 +208,16 @@ Same date and time as the planets, with a **single large disk**.
 
 **Hover**: distance (km), diameter (′), illuminated %, phase, sub-Earth latitude.
 
+### Animation
+
+At the bottom of **Planètes à l'échelle** and **Lune**, the **Animation** bar steps the shared date.
+
+- **Lecture** plays forward, **Reculer** plays backward, **Arrêt** stops. The active direction is green. The first step is immediate, then one step every 0.7 s.
+- **Saut**: a count and a unit. Days 1–365, months 1–12, years 1–10.
+- Hour and minute stay put. A day that does not exist in the target month (31 January plus one month) lands on the last day of that month.
+- Playback stops at year 1000 and year 2500.
+- **Date et heure** has no bar, but it shows the moving instant. Switching tabs does not stop playback.
+
 ### Optional images
 
 The app **does not ship** planetary photo maps. Place files in **`assets/textures`** next to the program (or your usual working folder).
@@ -226,6 +247,7 @@ After adding or changing a file, **change the time by one minute or click the vi
 2. Open **Planètes à l'échelle** to compare sizes and phases.
 3. Open **Lune** for the Moon.
 4. Toggle **Nord vers le bas** to match your observing habit.
+5. In **Animation**, set the step, then press **Lecture** or **Reculer**.
 
 ---
 

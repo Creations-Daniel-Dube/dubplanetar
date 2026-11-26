@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod animation;
 mod bodies;
 mod disk;
 mod ephemeris;
@@ -76,6 +77,7 @@ impl eframe::App for DubPlanetar {
             .show(ui, |ui| {
                 self.panels[self.current].ui(ui, &mut self.observation);
             });
+        animation::tick(ui.ctx(), &mut self.observation);
     }
 }
 

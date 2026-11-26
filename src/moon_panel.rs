@@ -2,6 +2,7 @@
 
 use image::RgbaImage;
 
+use crate::animation;
 use crate::bodies::{self, Body, HeightMap};
 use crate::disk::{self, DiskInput};
 use crate::ephemeris::{self, Appearance};
@@ -71,6 +72,7 @@ impl Panel for MoonPanel {
         }
         ui.allocate_rect(full, egui::Sense::hover());
 
+        let content = animation::content_rect(full);
         let jd = ephemeris::julian_day_utc(observation.when.with_timezone(&chrono::Utc));
         let app = ephemeris::appearance(Body::Moon, jd);
         let painter = ui.painter().clone();
@@ -85,7 +87,7 @@ impl Panel for MoonPanel {
             egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
 
-        let room = image_room(full);
+        let room = image_room(content);
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let side_px = f64::from(room.width().min(room.height())) * ppp;
         let radius_px = (side_px * 0.5 / Body::Moon.canvas_extent())
@@ -108,7 +110,8 @@ impl Panel for MoonPanel {
             egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
         );
         response.on_hover_text(tooltip(&app));
-        paint_labels(&painter, full, &app);
+        paint_labels(&painter, content, &app);
+        animation::bar(ui, observation, full);
     }
 }
 

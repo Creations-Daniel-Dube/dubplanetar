@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use image::RgbaImage;
 
+use crate::animation;
 use crate::bodies::{self, Body};
 use crate::disk::{self, DiskInput};
 use crate::ephemeris::{self, Appearance};
@@ -58,8 +59,9 @@ impl Panel for PlanetsPanel {
         }
         ui.allocate_rect(full, egui::Sense::hover());
 
+        let content = animation::content_rect(full);
         let jd = ephemeris::julian_day_utc(observation.when.with_timezone(&chrono::Utc));
-        let slots = layout_slots(full);
+        let slots = layout_slots(content);
         let views: Vec<(Body, Appearance)> = slots
             .iter()
             .map(|slot| (slot.body, ephemeris::appearance(slot.body, jd)))
@@ -88,7 +90,7 @@ impl Panel for PlanetsPanel {
 
         let painter = ui.painter().clone();
         paint_header(&painter, full, observation, scale);
-        paint_rows(&painter, full);
+        paint_rows(&painter, content);
 
         let cb = egui::Rect::from_min_size(
             egui::pos2(full.left() + 16.0, full.top() + 86.0),
@@ -126,6 +128,7 @@ impl Panel for PlanetsPanel {
             response.on_hover_text(tooltip(app));
             paint_labels(&painter, slot, app);
         }
+        animation::bar(ui, observation, full);
     }
 }
 

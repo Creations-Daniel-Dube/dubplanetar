@@ -17,10 +17,52 @@ pub const MONTHS: [&str; 12] = [
     "décembre",
 ];
 
+pub const YEAR_MIN: i32 = 1000;
+pub const YEAR_MAX: i32 = 2500;
+
+/// Sens de la lecture. `Stopped` laisse la date immobile.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Playback {
+    Stopped,
+    Forward,
+    Backward,
+}
+
+/// Unité du saut d'animation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StepUnit {
+    Days,
+    Months,
+    Years,
+}
+
+impl StepUnit {
+    pub fn label(self) -> &'static str {
+        match self {
+            StepUnit::Days => "Jours",
+            StepUnit::Months => "Mois",
+            StepUnit::Years => "Années",
+        }
+    }
+
+    pub fn max_amount(self) -> i32 {
+        match self {
+            StepUnit::Days => 365,
+            StepUnit::Months => 12,
+            StepUnit::Years => 10,
+        }
+    }
+}
+
 pub struct Observation {
     pub when: DateTime<Local>,
     /// Si vrai, le nord céleste est affiché vers le bas (comme dans un télescope).
     pub north_down: bool,
+    pub playback: Playback,
+    pub step_amount: i32,
+    pub step_unit: StepUnit,
+    /// Instant où le prochain pas est dû. `None` quand la lecture est arrêtée.
+    pub next_step: Option<std::time::Instant>,
 }
 
 impl Observation {
@@ -28,6 +70,10 @@ impl Observation {
         Self {
             when: truncate_minute(Local::now()),
             north_down: false,
+            playback: Playback::Stopped,
+            step_amount: 1,
+            step_unit: StepUnit::Days,
+            next_step: None,
         }
     }
 }
