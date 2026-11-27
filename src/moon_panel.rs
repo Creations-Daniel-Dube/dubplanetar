@@ -21,8 +21,14 @@ const LABEL: egui::Color32 = egui::Color32::from_rgb(235, 235, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
 /// Diamètre angulaire qui remplit le cadre : 35′.
 const FRAME_ARCSEC: f64 = 35.0 * 60.0;
+/// `1` est la taille à l'ouverture. Au-delà, le disque est déjà cadré : on grossit dedans.
+const ZOOM_MIN: f64 = 1.0;
+const ZOOM_MAX: f64 = 8.0;
+const RADIUS_STEP: f64 = 16.0;
+const RESET_ZOOM: &str = "Grossissement par défaut";
 
 pub struct MoonPanel {
+    zoom: f64,
     map_stamp: Option<(u64, u64)>,
     map_loaded: bool,
     map: Option<Arc<RgbaImage>>,
@@ -37,6 +43,7 @@ pub struct MoonPanel {
 impl Default for MoonPanel {
     fn default() -> Self {
         Self {
+            zoom: 1.0,
             map_stamp: None,
             map_loaded: false,
             map: None,
@@ -87,6 +94,10 @@ impl Panel for MoonPanel {
         let painter = ui.painter().clone();
         paint_header(&painter, full, observation);
 
+        let room = image_room(content);
+        let hover = ui.interact(room, ui.scope_id().with("moon-zoom"), egui::Sense::hover());
+        magnify(ui, hover.hovered(), &mut self.zoom, ZOOM_MAX);
+
         let cb = egui::Rect::from_min_size(
             egui::pos2(full.left() + 16.0, full.top() + 86.0),
             egui::vec2(240.0, 22.0),
@@ -95,11 +106,12 @@ impl Panel for MoonPanel {
             cb,
             egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
+        place_reset_button(ui, reset_zoom_rect(ui, full), &mut self.zoom);
 
-        let room = image_room(content);
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let side_px = f64::from(room.width().min(room.height())) * ppp;
-        let radius_px = moon_radius_px(side_px, app.eq_diameter_arcsec);
+        let base_radius = moon_radius_px(side_px, app.eq_diameter_arcsec);
+        let radius_px = zoomed_radius_px(side_px, app.eq_diameter_arcsec, self.zoom);
         let minute = (jd * 1440.0).round() as i64;
         let busy = self.sync(ui.ctx(), &app, minute, radius_px, observation.north_down);
         if busy {
@@ -110,14 +122,23 @@ impl Panel for MoonPanel {
         if let Some(cached) = self.raster.as_ref() {
             let [w, h] = cached.texture.size();
             let ppp_f = ui.ctx().pixels_per_point();
-            let display = egui::vec2(w as f32 / ppp_f, h as f32 / ppp_f);
-            let center = room.center();
-            let image_rect = egui::Rect::from_center_size(center, display);
-            let response = ui.put(
+            let cached_radius = f64::from(cached.key.radius_px).max(1.0);
+            let desired = f64::from(base_radius) * self.zoom;
+            let factor = (desired / cached_radius) as f32;
+            let display = egui::vec2(w as f32 / ppp_f * factor, h as f32 / ppp_f * factor);
+            let image_rect = egui::Rect::from_center_size(room.center(), display);
+            ui.painter().with_clip_rect(room).image(
+                cached.texture.id(),
                 image_rect,
-                egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
+                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                egui::Color32::WHITE,
             );
-            response.on_hover_text(tooltip(&app));
+            if ui
+                .input(|i| i.pointer.hover_pos())
+                .is_some_and(|pos| image_rect.contains(pos))
+            {
+                hover.on_hover_text(tooltip(&app));
+            }
         }
         paint_labels(&painter, content, &app);
         if busy {
@@ -246,6 +267,87 @@ fn moon_radius_px(room_side_px: f64, diameter_arcsec: f64) -> i32 {
         .max(1.0) as i32
 }
 
+/// Rayon demandé au raster. À `zoom = 1` c'est le rayon d'ouverture, sans quantification,
+/// pour que le premier dessin reste celui d'aujourd'hui. Au-delà, pas de 16 px, plafonné
+/// au côté `MAX_SIDE`.
+fn zoomed_radius_px(room_side_px: f64, diameter_arcsec: f64, zoom: f64) -> i32 {
+    let base = moon_radius_px(room_side_px, diameter_arcsec);
+    let zoom = zoom.clamp(ZOOM_MIN, ZOOM_MAX);
+    if zoom <= 1.0 + 1e-9 {
+        return base;
+    }
+    quantize_radius(f64::from(base) * zoom).min(max_disk_radius())
+}
+
+fn quantize_radius(radius_px: f64) -> i32 {
+    ((radius_px / RADIUS_STEP).round().max(1.0) as i32) * RADIUS_STEP as i32
+}
+
+fn max_disk_radius() -> i32 {
+    let mut lo = 1;
+    let mut hi = MAX_SIDE;
+    let mut best = 1;
+    while lo <= hi {
+        let mid = (lo + hi) / 2;
+        if disk_fits(mid) {
+            best = mid;
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    best
+}
+
+fn disk_fits(radius_px: i32) -> bool {
+    let extent = Body::Moon.canvas_extent();
+    let eq = f64::from(radius_px).max(0.75);
+    let half = (eq * extent).ceil() as i32 + 1;
+    half * 2 + 1 <= MAX_SIDE
+}
+
+fn magnify(ui: &egui::Ui, hovered: bool, zoom: &mut f64, zoom_max: f64) {
+    if !hovered {
+        return;
+    }
+    let wheel = ui.input(|i| i.zoom_delta());
+    if (wheel - 1.0).abs() > 0.001 {
+        *zoom = (*zoom * f64::from(wheel)).clamp(ZOOM_MIN, zoom_max);
+    }
+    let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+    if scroll.abs() > 0.0 {
+        let factor = (1.0 + f64::from(scroll) * 0.001_2).clamp(0.75, 1.3);
+        *zoom = (*zoom * factor).clamp(ZOOM_MIN, zoom_max);
+    }
+}
+
+fn reset_zoom_rect(ui: &egui::Ui, full: egui::Rect) -> egui::Rect {
+    let font = egui::TextStyle::Button.resolve(ui.style());
+    let galley = ui
+        .painter()
+        .layout_no_wrap(RESET_ZOOM.to_owned(), font, egui::Color32::WHITE);
+    let pad = ui.spacing().button_padding;
+    let size = galley.size() + pad * 2.0;
+    egui::Rect::from_min_size(
+        egui::pos2(full.right() - 16.0 - size.x, full.top() + 86.0),
+        egui::vec2(size.x, size.y.max(22.0)),
+    )
+}
+
+fn place_reset_button(ui: &mut egui::Ui, rect: egui::Rect, zoom: &mut f64) {
+    let enabled = (*zoom - 1.0).abs() > 1.0e-3;
+    ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+        ui.add_enabled_ui(enabled, |ui| {
+            if ui
+                .add_sized(rect.size(), egui::Button::new(RESET_ZOOM))
+                .clicked()
+            {
+                *zoom = 1.0;
+            }
+        });
+    });
+}
+
 fn image_room(full: egui::Rect) -> egui::Rect {
     egui::Rect::from_min_max(
         egui::pos2(full.left() + 12.0, full.top() + HEADER_H),
@@ -269,9 +371,9 @@ fn paint_header(painter: &egui::Painter, full: egui::Rect, observation: &Observa
         LABEL,
     );
     let subtitle = if observation.north_down {
-        "Telle que vue dans un télescope, le Nord vers le bas."
+        "Telle que vue dans un télescope, le Nord vers le bas. Molette pour zoomer."
     } else {
-        "Telle que vue avec le Nord vers le haut."
+        "Telle que vue avec le Nord vers le haut. Molette pour zoomer."
     };
     painter.text(
         egui::pos2(full.left() + 16.0, full.top() + 64.0),
@@ -371,5 +473,22 @@ mod tests {
         assert!(near > far);
         assert_eq!(near, (full * 1_980.0 / FRAME_ARCSEC).round() as i32);
         assert_eq!(far, (full * 1_740.0 / FRAME_ARCSEC).round() as i32);
+    }
+
+    #[test]
+    fn zoom_one_is_the_opening_radius_and_two_doubles_it_until_the_cap() {
+        let room = 480.0;
+        let base = moon_radius_px(room, FRAME_ARCSEC);
+        assert_eq!(zoomed_radius_px(room, FRAME_ARCSEC, 1.0), base);
+        assert_eq!(zoomed_radius_px(room, FRAME_ARCSEC, 0.25), base);
+        let doubled = zoomed_radius_px(room, FRAME_ARCSEC, 2.0);
+        assert!((f64::from(doubled) - f64::from(base) * 2.0).abs() <= 8.0);
+        assert!(doubled <= max_disk_radius());
+
+        let wide = 4_000.0;
+        let capped = zoomed_radius_px(wide, FRAME_ARCSEC, 8.0);
+        assert_eq!(capped, max_disk_radius());
+        assert!(disk_fits(capped));
+        assert!(!disk_fits(capped + 1));
     }
 }

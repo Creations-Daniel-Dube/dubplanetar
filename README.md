@@ -1,8 +1,14 @@
 # dubPlanetar — Planètes à l'échelle
 
-**Version 0.4.2000 BETA**
+**Version 0.5.3400 BETA**
 
 Application de bureau pour visualiser les planètes, la Lune et le Soleil telles qu'elles apparaîtraient dans un télescope, avec les vraies tailles angulaires. Les planètes et la Lune montrent aussi leur phase, à l'instant choisi. Le Soleil suit l'heure de l'ordinateur.
+
+On peut en outre :
+
+- regarder les planètes et le Soleil **depuis une autre planète** que la Terre (la Lune reste vue de la Terre) ;
+- ouvrir, par un double-clic, les **satellites** de Mars, Jupiter, Saturne, Uranus et Neptune, quand la vue est depuis la Terre ;
+- **grossir** la Lune et le Soleil à la molette, puis revenir à la taille d'ouverture avec **Grossissement par défaut**.
 
 Le dépôt GitHub : [Creations-Daniel-Dube/dubplanetar](https://github.com/Creations-Daniel-Dube/dubplanetar)
 
@@ -108,6 +114,8 @@ Même date et heure que les planètes, mais **un seul disque**, aussi grand que 
 
 **Sous le disque** : nom, diamètre en **minutes d'arc** (′), pourcentage éclairé.
 
+**Grossissement** : la molette, ou le pavé tactile, le pointeur sur l'image, agrandit le disque jusqu'à **huit fois** la taille d'ouverture. On ne peut pas le rendre plus petit que cette taille (une Lune de 35′ qui remplit le cadre, ou plus petite si elle est loin). L'image reste dans le cadre. Le bouton **Grossissement par défaut**, à droite de la case Nord, revient à cette taille ; il est inactif quand on y est déjà. Le grossissement reste si vous changez d'onglet.
+
 **Relief (optionnel)** : si une carte de hauteur `moon_bump` est présente (voir ci-dessous), les crêtes et pentes sont un peu plus claires ou plus sombres selon l'angle du Soleil — surtout près du **terminateur**. Ce n'est pas une simulation d'ombres portées au fond des cratères.
 
 **Survol** : distance en kilomètres, diamètre en minutes d'arc, % éclairé, phase, latitude sous-terrestre.
@@ -120,7 +128,9 @@ Cet onglet **ne suit pas** la date des autres vues. Il affiche toujours le Solei
 
 La liste **Vu depuis** est la même que dans **Planètes à l'échelle**.
 
-**En-tête** : titre, heure de l'ordinateur, origine de l'image, case **Nord vers le bas** (rotation de 180°, les textes restent lisibles).
+**Grossissement** : même geste que pour la Lune, et le même bouton **Grossissement par défaut**. La taille d'ouverture est celle du paragraphe ci-dessus : le Soleil vu de Mercure remplit le cadre, les autres points de vue sont plus petits dans le même rapport. La molette agrandit au moins huit fois, et davantage quand le disque est petit, sans dépasser **trente-deux fois**. Depuis une planète lointaine, le petit disque s'agrandit nettement, et il peut remplir le cadre tant que le plafond de trente-deux fois le permet. La photo reste celle de SDO : le zoom l'agrandit, il n'en fabrique pas une plus fine.
+
+**En-tête** : titre, heure de l'ordinateur, origine de l'image, case **Nord vers le bas** (rotation de 180°, les textes restent lisibles). Le sous-titre rappelle : molette pour zoomer.
 
 **Sous le disque** : nom, diamètre en **minutes d'arc** (′), distance en unités astronomiques.
 
@@ -163,6 +173,7 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 - Les photos des planètes et de la Lune sont des cartes fixes : pas de météo, pas de taches en évolution sur Jupiter, etc.
 - L'image du Soleil est le dernier continuum SDO/HMI disponible au lancement (souvent différé de quelques minutes), pas une reconstitution pour une date passée. Depuis une autre planète, cette photo ne tourne pas pour montrer l'hémisphère solaire qui lui fait face.
 - L'éclairage du relief lunaire accentue les pentes ; il ne calcule pas les ombres profondes dans les cratères.
+- Le grossissement de la Lune et du Soleil ne descend pas sous la taille d'ouverture. Très poussé, il adoucit l'image : il n'ajoute pas de détails absents de la carte lunaire ou de la photo SDO.
 - Calculs pensés pour les usages amateurs (années 1000–2500) ; ce n'est pas un outil professionnel de mission spatiale.
 
 ### Aide rapide
@@ -173,6 +184,8 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 4. Ouvrez **Soleil** pour le disque du moment, à l'heure de l'ordinateur.
 5. Cochez ou décochez **Nord vers le bas** selon votre habitude d'observation.
 6. Dans **Animation**, choisissez le saut, puis **Lecture**, **Reculer** ou **1 fois**.
+7. Sur **Lune** ou **Soleil**, la molette grossit. **Grossissement par défaut** retrouve la taille d'ouverture.
+8. Dans **Planètes à l'échelle**, choisissez **Vu depuis**, ou double-cliquez une planète pour ses satellites.
 
 ---
 
@@ -181,6 +194,8 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 ### Getting started
 
 Open **Planètes à l'échelle** (*Planets at scale*). The window has a left-hand menu and a main sky view. On first launch, the **Planètes à l'échelle** tab is shown with the current local date and time (rounded to the minute).
+
+You can also view the planets and the Sun **from another planet** (the Moon stays as seen from Earth), open a planet's **moons** with a double-click when the view is from Earth, and **magnify** the Moon or the Sun with the scroll wheel. **Grossissement par défaut** restores the size shown when the screen opened.
 
 ### Left menu
 
@@ -274,6 +289,8 @@ Same date and time as the planets, with a **single disk** as large as the frame 
 
 **Labels**: name, diameter in **arcminutes** (′), illuminated %.
 
+**Magnification**: with the pointer over the picture, the scroll wheel or trackpad enlarges the disk up to **eight times** the opening size. It cannot be drawn smaller than that size (a 35′ Moon filling the frame, or a smaller one when the Moon is farther). The picture stays inside the frame. **Grossissement par défaut**, to the right of the north checkbox, returns to that size and is inactive when you are already there. The magnification is kept if you switch tabs.
+
 **Optional relief**: with a grayscale height map `moon_bump` (see below), slopes catch sunlight near the **terminator** more strongly. This is slope shading, not ray-traced crater shadows.
 
 **Hover**: distance (km), diameter (′), illuminated %, phase, sub-Earth latitude.
@@ -286,7 +303,9 @@ On each launch the app downloads the NASA **SDO/HMI continuum** quick-look and k
 
 The **Vu depuis** list is the same one as on **Planètes à l'échelle**.
 
-**Header**: title, computer time, image source, and the **Nord vers le bas** checkbox (a 180° turn; labels stay upright).
+**Magnification**: the same gesture as on the Moon, and the same **Grossissement par défaut** button. The opening size is the one described above: the Sun as seen from Mercury fills the frame, and the other viewpoints are smaller in the same ratio. The wheel enlarges at least eight times, and further when the disk is small, up to **thirty-two times**. From a distant planet the small disk grows sharply, and it can fill the frame as long as the thirty-two-times ceiling allows. The photo remains the SDO image: zoom makes it larger, it does not invent a sharper one.
+
+**Header**: title, computer time, image source, and the **Nord vers le bas** checkbox (a 180° turn; labels stay upright). The subtitle reminds you: use the wheel to zoom.
 
 **Under the disk**: name, diameter in **arcminutes** (′), distance in astronomical units.
 
@@ -328,6 +347,7 @@ After adding or changing a file, **change the time by one minute or click the vi
 - Planet and Moon textures are static; no weather or evolving surface features.
 - The Sun picture is the latest SDO/HMI continuum available at launch (often a few minutes behind), not a reconstruction for a past date. From another planet, that photo does not rotate to the solar hemisphere facing that planet.
 - Lunar bump shading exaggerates slopes; it does not model deep crater shadowing.
+- Moon and Sun magnification cannot go below the opening size. Pushed far, it softens the picture: it does not add detail that is not in the lunar map or the SDO photo.
 - Suited to amateur use (years 1000–2500), not professional mission planning.
 
 ### Quick workflow
@@ -338,6 +358,8 @@ After adding or changing a file, **change the time by one minute or click the vi
 4. Open **Soleil** for the Sun as it is now, on the computer's clock.
 5. Toggle **Nord vers le bas** to match your observing habit.
 6. In **Animation**, set the step, then press **Lecture**, **Reculer**, or **1 fois**.
+7. On **Lune** or **Soleil**, the wheel magnifies. **Grossissement par défaut** restores the opening size.
+8. On **Planètes à l'échelle**, choose **Vu depuis**, or double-click a planet for its moons.
 
 ---
 

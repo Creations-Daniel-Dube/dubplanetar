@@ -1,6 +1,6 @@
 [package]
 name = "dubPlanetar"
-version = "0.5.3200"
+version = "0.5.3400"
 edition = "2024"
 
 [dependencies]
