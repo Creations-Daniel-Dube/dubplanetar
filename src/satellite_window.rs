@@ -10,6 +10,7 @@ use crate::ephemeris::{self, Appearance};
 use crate::raster_pump::{DiskJob, RasterPump};
 use crate::satellites::{self, MAG_LIMIT, MoonSystem, Satellite};
 use crate::state::{self, Observation, Viewpoint};
+use crate::vision;
 
 const LABEL: egui::Color32 = egui::Color32::from_rgb(235, 235, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
@@ -32,6 +33,7 @@ struct MoonTex {
     name: String,
     radius_px: i32,
     gain_q: i32,
+    real: bool,
     texture: egui::TextureHandle,
 }
 
@@ -41,12 +43,14 @@ struct DiskKey {
     minute: i64,
     radius_px: i32,
     stamp: Option<(u64, u64)>,
+    axis: bool,
 }
 
 struct Cached {
     key: DiskKey,
     north_up: RgbaImage,
     gain_q: i32,
+    real: bool,
     north_down: bool,
     texture: egui::TextureHandle,
 }
@@ -68,7 +72,12 @@ impl SatelliteWindow {
         }
     }
 
-    pub fn ui(&mut self, ctx: &egui::Context, observation: &Observation, body: &mut Option<Body>) {
+    pub fn ui(
+        &mut self,
+        ctx: &egui::Context,
+        observation: &mut Observation,
+        body: &mut Option<Body>,
+    ) {
         if observation.viewpoint != Viewpoint::Earth {
             *body = None;
         }
@@ -105,7 +114,7 @@ impl SatelliteWindow {
     fn contents(
         &mut self,
         ui: &mut egui::Ui,
-        observation: &Observation,
+        observation: &mut Observation,
         planet: Body,
         jd: f64,
         app: &Appearance,
@@ -114,6 +123,8 @@ impl SatelliteWindow {
         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.close_request = true;
         }
+        ui.checkbox(&mut observation.real_vision, "Vision réelle des objets");
+        ui.add_space(4.0);
         ui.label(
             egui::RichText::new(format!(
                 "{}   ·   heure locale",
@@ -160,7 +171,12 @@ impl SatelliteWindow {
         let scale = base * self.zoom;
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let radius_px = quantize_radius(app.eq_diameter_arcsec * 0.5 * scale * ppp);
-        let gain = disk_gain(system.planet_magnitude, app.eq_diameter_arcsec, scale);
+        let real = observation.real_vision;
+        let gain = if real {
+            vision::gain_for(planet, app, jd)
+        } else {
+            disk_gain(system.planet_magnitude, app.eq_diameter_arcsec, scale)
+        };
         let minute = (jd * 1_440.0).round() as i64;
         let busy = self.sync(
             ui.ctx(),
@@ -169,6 +185,7 @@ impl SatelliteWindow {
             minute,
             radius_px,
             gain,
+            real,
             observation.north_down,
         );
         if busy {
@@ -177,6 +194,24 @@ impl SatelliteWindow {
         }
         let painter = ui.painter().clone();
         let center = sky.center();
+        let mut label_color = LABEL;
+        if real {
+            if let Some(backdrop) = vision::sky_behind(
+                planet,
+                Viewpoint::Earth,
+                app,
+                jd,
+                vision::longitude_deg(observation.when),
+            ) {
+                painter.rect_filled(sky, 0.0, backdrop.color);
+                if backdrop.bright {
+                    label_color = egui::Color32::from_rgb(16, 22, 40);
+                }
+            }
+            let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
+            let clip = painter.with_clip_rect(sky);
+            vision::paint_halo(&clip, center, radius, gain, app.illuminated, false);
+        }
         if let Some(cached) = &self.cache {
             let [w, h] = cached.texture.size();
             let display = egui::vec2(w as f32 / ppp as f32, h as f32 / ppp as f32);
@@ -196,9 +231,20 @@ impl SatelliteWindow {
         }
         let moons: Vec<Satellite> = system.moons.clone();
         for moon in &moons {
-            self.paint_moon(&painter, ui.ctx(), center, sign, scale, ppp, app, moon);
+            self.paint_moon(
+                &painter,
+                ui.ctx(),
+                center,
+                sign,
+                scale,
+                ppp,
+                app,
+                moon,
+                real,
+                label_color,
+            );
         }
-        paint_scale(&painter, sky, scale);
+        paint_scale(&painter, sky, scale, label_color);
     }
 
     fn sync(
@@ -209,13 +255,20 @@ impl SatelliteWindow {
         minute: i64,
         radius_px: i32,
         gain: f64,
+        real: bool,
         north_down: bool,
     ) -> bool {
-        let gain_q = (gain * 40.0).round() as i32;
+        let gain_q = if real {
+            vision::quantize_gain(gain)
+        } else {
+            (gain * 40.0).round() as i32
+        };
         for done in self.pump.poll() {
             if self.token == done.token {
                 if let Some(key) = self.pending.clone() {
-                    self.install(ctx, key, gain_q, north_down, done.image);
+                    if key.axis == !real {
+                        self.install(ctx, key, gain_q, gain, real, north_down, done.image);
+                    }
                 }
             }
         }
@@ -225,14 +278,17 @@ impl SatelliteWindow {
             minute,
             radius_px,
             stamp,
+            axis: !real,
         };
         if let Some(cached) = &mut self.cache {
             if cached.key == key {
-                if cached.north_down != north_down || cached.gain_q != gain_q {
-                    let color = colorize(&cached.north_up, gain_q as f64 / 40.0, north_down);
+                if cached.north_down != north_down || cached.gain_q != gain_q || cached.real != real
+                {
+                    let color = grade_disk(&cached.north_up, gain, real, north_down);
                     cached.texture.set(color, egui::TextureOptions::LINEAR);
                     cached.north_down = north_down;
                     cached.gain_q = gain_q;
+                    cached.real = real;
                 }
                 return false;
             }
@@ -253,7 +309,7 @@ impl SatelliteWindow {
                 bump: None,
                 bump_path: None,
                 rings: planet.ring_zones(),
-                draw_axis: true,
+                draw_axis: !real,
                 radius_px: f64::from(radius_px),
                 max_side: 1000,
             });
@@ -278,16 +334,18 @@ impl SatelliteWindow {
         ctx: &egui::Context,
         key: DiskKey,
         gain_q: i32,
+        gain: f64,
+        real: bool,
         north_down: bool,
         north_up: RgbaImage,
     ) {
-        let gain = f64::from(gain_q) / 40.0;
-        let color = colorize(&north_up, gain, north_down);
+        let color = grade_disk(&north_up, gain, real, north_down);
         if let Some(cached) = &mut self.cache {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
             cached.key = key;
             cached.north_up = north_up;
             cached.gain_q = gain_q;
+            cached.real = real;
             cached.north_down = north_down;
         } else {
             let texture = ctx.load_texture("satellite-planet", color, egui::TextureOptions::LINEAR);
@@ -295,10 +353,19 @@ impl SatelliteWindow {
                 key,
                 north_up,
                 gain_q,
+                real,
                 north_down,
                 texture,
             });
         }
+    }
+}
+
+fn grade_disk(src: &RgbaImage, gain: f64, real: bool, north_down: bool) -> egui::ColorImage {
+    if real {
+        vision::present_disk(src, north_down, Some(gain))
+    } else {
+        colorize(src, gain, north_down)
     }
 }
 
@@ -389,8 +456,14 @@ impl SatelliteWindow {
         ppp: f64,
         app: &Appearance,
         moon: &Satellite,
+        real: bool,
+        label_color: egui::Color32,
     ) {
-        let gain = point_gain(moon.magnitude);
+        let gain = if real {
+            vision::real_point_gain(moon.magnitude)
+        } else {
+            point_gain(moon.magnitude)
+        };
         if moon.hidden || gain <= 0.0 {
             return;
         }
@@ -398,8 +471,12 @@ impl SatelliteWindow {
         let diameter_px = moon.diameter_arcsec * scale * ppp;
         if diameter_px >= 3.0 {
             let radius_px = (diameter_px * 0.5).round().max(2.0) as i32;
-            let gain_q = (gain * 40.0).round() as i32;
-            let texture = self.moon_disk(ctx, moon, app, radius_px, gain_q, gain);
+            let gain_q = if real {
+                vision::quantize_gain(gain)
+            } else {
+                (gain * 40.0).round() as i32
+            };
+            let texture = self.moon_disk(ctx, moon, app, radius_px, gain_q, gain, real);
             let ppp_f = ppp as f32;
             let size = texture.size();
             let display = egui::vec2(size[0] as f32 / ppp_f, size[1] as f32 / ppp_f);
@@ -410,8 +487,18 @@ impl SatelliteWindow {
                 egui::Color32::WHITE,
             );
         } else {
-            let radius = 1.7 + 1.3 * gain as f32;
-            painter.circle_filled(at, radius, tint(moon.color, gain));
+            let radius = if real {
+                let t = (gain / (1.0 + gain)) as f32;
+                1.3 + 1.8 * t
+            } else {
+                1.7 + 1.3 * gain as f32
+            };
+            let color = if real {
+                vision::tone_rgb(moon.color, gain)
+            } else {
+                tint(moon.color, gain)
+            };
+            painter.circle_filled(at, radius, color);
         }
         let offset = at - center;
         let label_at = if offset.length() < 8.0 {
@@ -424,7 +511,7 @@ impl SatelliteWindow {
             egui::Align2::LEFT_CENTER,
             moon.name,
             egui::FontId::proportional(12.0),
-            LABEL,
+            label_color,
         );
     }
 
@@ -436,12 +523,14 @@ impl SatelliteWindow {
         radius_px: i32,
         gain_q: i32,
         gain: f64,
+        real: bool,
     ) -> egui::TextureHandle {
-        if let Some(found) = self
-            .moon_tex
-            .iter()
-            .find(|tex| tex.name == moon.name && tex.radius_px == radius_px && tex.gain_q == gain_q)
-        {
+        if let Some(found) = self.moon_tex.iter().find(|tex| {
+            tex.name == moon.name
+                && tex.radius_px == radius_px
+                && tex.gain_q == gain_q
+                && tex.real == real
+        }) {
             return found.texture.clone();
         }
         let image = disk::render_disk(
@@ -458,15 +547,20 @@ impl SatelliteWindow {
             f64::from(radius_px),
             96,
         );
-        let tinted = tint_disk(&image, gain);
-        let color = egui::ColorImage::from_rgba_unmultiplied(
-            [tinted.width() as usize, tinted.height() as usize],
-            tinted.as_raw(),
-        );
+        let color = if real {
+            vision::present_disk(&image, false, Some(gain))
+        } else {
+            let tinted = tint_disk(&image, gain);
+            egui::ColorImage::from_rgba_unmultiplied(
+                [tinted.width() as usize, tinted.height() as usize],
+                tinted.as_raw(),
+            )
+        };
         if let Some(found) = self.moon_tex.iter_mut().find(|tex| tex.name == moon.name) {
             found.texture.set(color, egui::TextureOptions::LINEAR);
             found.radius_px = radius_px;
             found.gain_q = gain_q;
+            found.real = real;
             return found.texture.clone();
         }
         let texture = ctx.load_texture(
@@ -478,6 +572,7 @@ impl SatelliteWindow {
             name: moon.name.to_owned(),
             radius_px,
             gain_q,
+            real,
             texture: texture.clone(),
         });
         texture
@@ -513,7 +608,7 @@ fn place(center: egui::Pos2, sign: f32, scale: f64, east: f64, north: f64) -> eg
         )
 }
 
-fn paint_scale(painter: &egui::Painter, sky: egui::Rect, px_per_arcsec: f64) {
+fn paint_scale(painter: &egui::Painter, sky: egui::Rect, px_per_arcsec: f64, color: egui::Color32) {
     let spans = [10.0, 20.0, 30.0, 60.0, 120.0, 300.0, 600.0];
     let max_w = f64::from(sky.width()) * 0.42;
     let mut span = 10.0;
@@ -526,7 +621,7 @@ fn paint_scale(painter: &egui::Painter, sky: egui::Rect, px_per_arcsec: f64) {
     let x1 = sky.right() - 16.0;
     let x0 = x1 - bar;
     let y = sky.bottom() - 22.0;
-    let stroke = egui::Stroke::new(1.5, LABEL);
+    let stroke = egui::Stroke::new(1.5, color);
     painter.line_segment([egui::pos2(x0, y), egui::pos2(x1, y)], stroke);
     painter.line_segment([egui::pos2(x0, y - 4.0), egui::pos2(x0, y + 4.0)], stroke);
     painter.line_segment([egui::pos2(x1, y - 4.0), egui::pos2(x1, y + 4.0)], stroke);
@@ -535,7 +630,7 @@ fn paint_scale(painter: &egui::Painter, sky: egui::Rect, px_per_arcsec: f64) {
         egui::Align2::CENTER_BOTTOM,
         format!("{}″", fr_num(span, 0)),
         egui::FontId::proportional(12.0),
-        LABEL,
+        color,
     );
 }
 

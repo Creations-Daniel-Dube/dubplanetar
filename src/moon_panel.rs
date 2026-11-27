@@ -10,7 +10,8 @@ use crate::bodies::{self, Body, HeightMap};
 use crate::ephemeris::{self, Appearance};
 use crate::panel::Panel;
 use crate::raster_pump::{self, DiskJob, RasterPump};
-use crate::state::{self, Observation};
+use crate::state::{self, Observation, Viewpoint};
+use crate::vision;
 
 const HEADER_H: f32 = 118.0;
 const LABEL_H: f32 = 58.0;
@@ -60,6 +61,8 @@ impl Default for MoonPanel {
 struct Cached {
     key: RasterKey,
     north_down: bool,
+    /// −1 : rendu détaillé. Sinon gain réel quantifié.
+    grade_q: i32,
     north_up: RgbaImage,
     texture: egui::TextureHandle,
 }
@@ -70,6 +73,8 @@ struct RasterKey {
     radius_px: i32,
     stamp: Option<(u64, u64)>,
     bump: Option<(u64, u64)>,
+    /// Trait bleu du pôle, absent en vision réelle.
+    axis: bool,
 }
 
 impl Panel for MoonPanel {
@@ -108,12 +113,36 @@ impl Panel for MoonPanel {
         );
         place_reset_button(ui, reset_zoom_rect(ui, full), &mut self.zoom);
 
+        let real = observation.real_vision;
+        let lon = vision::longitude_deg(observation.when);
+        let backdrop = if real {
+            vision::sky_behind(Body::Moon, Viewpoint::Earth, &app, jd, lon)
+        } else {
+            None
+        };
+        if let Some(sky) = backdrop {
+            painter.rect_filled(room, 0.0, sky.color);
+        }
+
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let side_px = f64::from(room.width().min(room.height())) * ppp;
         let base_radius = moon_radius_px(side_px, app.eq_diameter_arcsec);
         let radius_px = zoomed_radius_px(side_px, app.eq_diameter_arcsec, self.zoom);
         let minute = (jd * 1440.0).round() as i64;
-        let busy = self.sync(ui.ctx(), &app, minute, radius_px, observation.north_down);
+        let grade = if real {
+            Some(vision::gain_for(Body::Moon, &app, jd))
+        } else {
+            None
+        };
+        let busy = self.sync(
+            ui.ctx(),
+            &app,
+            minute,
+            radius_px,
+            observation.north_down,
+            real,
+            grade,
+        );
         if busy {
             observation.waiting_for_image = true;
             ui.ctx().request_repaint_after(Duration::from_millis(40));
@@ -127,6 +156,18 @@ impl Panel for MoonPanel {
             let factor = (desired / cached_radius) as f32;
             let display = egui::vec2(w as f32 / ppp_f * factor, h as f32 / ppp_f * factor);
             let image_rect = egui::Rect::from_center_size(room.center(), display);
+            if let Some(gain) = grade {
+                let radius = display.x * 0.5 / Body::Moon.canvas_extent() as f32;
+                let clip = ui.painter().with_clip_rect(room);
+                vision::paint_halo(
+                    &clip,
+                    image_rect.center(),
+                    radius,
+                    gain,
+                    app.illuminated,
+                    false,
+                );
+            }
             ui.painter().with_clip_rect(room).image(
                 cached.texture.id(),
                 image_rect,
@@ -140,7 +181,12 @@ impl Panel for MoonPanel {
                 hover.on_hover_text(tooltip(&app));
             }
         }
-        paint_labels(&painter, content, &app);
+        paint_labels(
+            &painter,
+            content,
+            &app,
+            backdrop.is_some_and(|sky| sky.bright),
+        );
         if busy {
             raster_pump::paint_busy(ui.painter(), content);
         }
@@ -156,36 +202,41 @@ impl MoonPanel {
         minute: i64,
         radius_px: i32,
         north_down: bool,
+        real: bool,
+        grade: Option<f64>,
     ) -> bool {
         for done in self.pump.poll() {
             let Some((token, key)) = self.requested.clone() else {
                 continue;
             };
-            if done.token == token {
+            if done.token == token && key.axis == !real {
                 self.map = done.loaded_texture.clone();
                 self.map_stamp = key.stamp;
                 self.map_loaded = true;
                 self.bump = done.loaded_bump.clone();
                 self.bump_stamp = key.bump;
                 self.bump_loaded = true;
-                self.install(ctx, key, north_down, done.image);
+                self.install(ctx, key, north_down, grade, done.image);
             }
         }
 
         let stamp = bodies::texture_stamp(Body::Moon);
         let bump_stamp = bodies::bump_stamp(Body::Moon);
+        let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         let key = RasterKey {
             minute,
             radius_px,
             stamp,
             bump: bump_stamp,
+            axis: !real,
         };
         if let Some(cached) = &mut self.raster {
             if cached.key == key {
-                if cached.north_down != north_down {
-                    let color = color_image(&cached.north_up, north_down);
+                if cached.north_down != north_down || cached.grade_q != grade_q {
+                    let color = vision::present_disk(&cached.north_up, north_down, grade);
                     cached.texture.set(color, egui::TextureOptions::LINEAR);
                     cached.north_down = north_down;
+                    cached.grade_q = grade_q;
                 }
                 return false;
             }
@@ -226,7 +277,7 @@ impl MoonPanel {
                 bump,
                 bump_path,
                 rings: &[],
-                draw_axis: true,
+                draw_axis: !real,
                 radius_px: f64::from(radius_px),
                 max_side: MAX_SIDE,
             });
@@ -240,19 +291,23 @@ impl MoonPanel {
         ctx: &egui::Context,
         key: RasterKey,
         north_down: bool,
+        grade: Option<f64>,
         north_up: RgbaImage,
     ) {
-        let color = color_image(&north_up, north_down);
+        let color = vision::present_disk(&north_up, north_down, grade);
+        let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         if let Some(cached) = &mut self.raster {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
             cached.key = key;
             cached.north_down = north_down;
+            cached.grade_q = grade_q;
             cached.north_up = north_up;
         } else {
             let texture = ctx.load_texture("moon-disk", color, egui::TextureOptions::LINEAR);
             self.raster = Some(Cached {
                 key,
                 north_down,
+                grade_q,
                 north_up,
                 texture,
             });
@@ -384,9 +439,19 @@ fn paint_header(painter: &egui::Painter, full: egui::Rect, observation: &Observa
     );
 }
 
-fn paint_labels(painter: &egui::Painter, full: egui::Rect, app: &Appearance) {
+fn paint_labels(painter: &egui::Painter, full: egui::Rect, app: &Appearance, bright_sky: bool) {
     let x = full.center().x;
     let y = full.bottom() - LABEL_H;
+    if bright_sky {
+        painter.rect_filled(
+            egui::Rect::from_min_max(
+                egui::pos2(x - 88.0, y - 4.0),
+                egui::pos2(x + 88.0, y + 56.0),
+            ),
+            6.0,
+            egui::Color32::from_rgba_unmultiplied(4, 8, 24, 220),
+        );
+    }
     let arcmin = app.eq_diameter_arcsec / 60.0;
     painter.text(
         egui::pos2(x, y),
@@ -426,31 +491,6 @@ fn tooltip(app: &Appearance) -> String {
 
 fn fr_num(value: f64, digits: usize) -> String {
     format!("{:.*}", digits, value).replace('.', ",")
-}
-
-fn color_image(north_up: &RgbaImage, north_down: bool) -> egui::ColorImage {
-    let owned;
-    let image = if north_down {
-        owned = flip_180(north_up);
-        &owned
-    } else {
-        north_up
-    };
-    egui::ColorImage::from_rgba_unmultiplied(
-        [image.width() as usize, image.height() as usize],
-        image.as_raw(),
-    )
-}
-
-fn flip_180(src: &RgbaImage) -> RgbaImage {
-    let (w, h) = src.dimensions();
-    let mut dst = RgbaImage::new(w, h);
-    for y in 0..h {
-        for x in 0..w {
-            dst.put_pixel(w - 1 - x, h - 1 - y, *src.get_pixel(x, y));
-        }
-    }
-    dst
 }
 
 #[cfg(test)]

@@ -10,6 +10,7 @@ use crate::ephemeris::{self, SunApparent};
 use crate::panel::Panel;
 use crate::state::{self, Observation, Viewpoint};
 use crate::sun_image::{self, Acquired};
+use crate::vision;
 
 const HEADER_H: f32 = 118.0;
 const LABEL_H: f32 = 58.0;
@@ -126,6 +127,10 @@ impl Panel for SoleilPanel {
             );
             let display = egui::vec2(side, side);
             let image_rect = egui::Rect::from_center_size(room.center(), display);
+            if observation.real_vision {
+                let clip = ui.painter().with_clip_rect(room);
+                vision::paint_halo(&clip, image_rect.center(), side * 0.5, 40.0, 1.0, true);
+            }
             ui.painter().with_clip_rect(room).image(
                 texture.id(),
                 image_rect,

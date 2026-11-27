@@ -110,6 +110,10 @@ pub struct Appearance {
     pub bright_limb_pa_rad: f64,
     pub flattening: f64,
     pub orientation: Orientation,
+    /// Ascension droite équatoriale J2000, radians.
+    pub ra_rad: f64,
+    /// Déclinaison équatoriale J2000, radians.
+    pub dec_rad: f64,
 }
 
 pub fn julian_day_utc(dt: DateTime<Utc>) -> f64 {
@@ -172,6 +176,8 @@ pub fn appearance_from(target: Body, viewpoint: Viewpoint, jd: f64) -> Appearanc
         bright_limb_pa_rad: position_angle(planet_ra, planet_dec, sun_ra, sun_dec),
         flattening: target.flattening(),
         orientation,
+        ra_rad: planet_ra,
+        dec_rad: planet_dec,
     }
 }
 
@@ -358,6 +364,13 @@ pub fn sun_apparent_from(jd: f64, viewpoint: Viewpoint) -> SunApparent {
         distance_au,
         eq_diameter_arcsec,
     }
+}
+
+/// Direction géocentrique du Soleil, équatorial J2000, en radians `(α, δ)`.
+pub fn sun_radec(jd: f64) -> (f64, f64) {
+    let earth = heliocentric(Body::Earth, jd);
+    let sun = -earth;
+    (sun.y.atan2(sun.x), sun.z.atan2(sun.x.hypot(sun.y)))
 }
 
 fn ecliptic_to_equatorial(v: Vec3) -> Vec3 {
@@ -598,6 +611,8 @@ fn moon_appearance(jd: f64) -> Appearance {
         bright_limb_pa_rad: position_angle(moon_ra, moon_dec, sun_ra, sun_dec),
         flattening: Body::Moon.flattening(),
         orientation,
+        ra_rad: moon_ra,
+        dec_rad: moon_dec,
     }
 }
 

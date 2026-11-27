@@ -31,6 +31,14 @@ Quatre entrées mènent aux parties du logiciel :
 | **Lune** | La Lune seule, en grand sur tout l'écran. |
 | **Soleil** | Le Soleil maintenant, à l'heure de l'ordinateur. |
 
+### Vision réelle des objets
+
+Case en haut de chaque écran, et dans la fenêtre des satellites. Décochée par défaut : les disques restent éclairés pour montrer le détail (phase, cartes, relief).
+
+Cochée, la luminosité suit la magnitude visuelle, dans l'esprit d'un télescope de 305 mm d'ouverture. Vénus devient un disque presque blanc, avec un halo. Uranus et Neptune restent visibles, plus sombres, et gardent leur couleur. Le trait bleu de l'axe du pôle disparaît : ce n'est pas de la lumière.
+
+Le fond juste derrière chaque disque imite le ciel terrestre à 45° N, avec la longitude du fuseau horaire de l'ordinateur. Loin du Soleil, la nuit, il est presque noir (Saturne à l'opposition). Près du Soleil, ou en plein jour, il devient clair (Mercure au crépuscule, Lune de jour). Depuis une autre planète, ce ciel ne s'applique pas : la Lune, elle, reste vue de la Terre. Le disque du Soleil garde sa couleur ; une auréole claire l'entoure.
+
 ### Date et heure
 
 C'est l'**horloge commune** des planètes et de la Lune. Tout ce que vous réglez ici s'applique en même temps à ces deux vues. L'onglet **Soleil** ne la suit pas : il reste à la date et à l'heure actuelles de l'ordinateur.
@@ -183,9 +191,10 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 3. Ouvrez **Lune** pour le détail lunaire.
 4. Ouvrez **Soleil** pour le disque du moment, à l'heure de l'ordinateur.
 5. Cochez ou décochez **Nord vers le bas** selon votre habitude d'observation.
-6. Dans **Animation**, choisissez le saut, puis **Lecture**, **Reculer** ou **1 fois**.
-7. Sur **Lune** ou **Soleil**, la molette grossit. **Grossissement par défaut** retrouve la taille d'ouverture.
-8. Dans **Planètes à l'échelle**, choisissez **Vu depuis**, ou double-cliquez une planète pour ses satellites.
+6. Cochez **Vision réelle des objets** pour une luminosité et un ciel proches de l'oculaire.
+7. Dans **Animation**, choisissez le saut, puis **Lecture**, **Reculer** ou **1 fois**.
+8. Sur **Lune** ou **Soleil**, la molette grossit. **Grossissement par défaut** retrouve la taille d'ouverture.
+9. Dans **Planètes à l'échelle**, choisissez **Vu depuis**, ou double-cliquez une planète pour ses satellites.
 
 ---
 
@@ -205,6 +214,14 @@ You can also view the planets and the Sun **from another planet** (the Moon stay
 | **Planètes à l'échelle** | Mercury through Neptune on one arcsecond scale. |
 | **Lune** | The Moon alone, large on screen. |
 | **Soleil** | The Sun right now, on the computer's clock. |
+
+### Real view of objects
+
+Checkbox at the top of every screen, and in the satellite window. Unchecked by default: disks stay exposed so phase, maps, and relief remain visible.
+
+Checked, brightness follows visual magnitude, in the spirit of a 305 mm telescope. Venus becomes an almost white disk with a glow. Uranus and Neptune stay visible, dimmer, and keep their color. The blue pole axis is hidden: it is not light.
+
+The patch behind each disk imitates the terrestrial sky at 45° N, using the longitude of the computer's time zone. Far from the Sun at night it is nearly black (Saturn at opposition). Close to the Sun, or in daytime, it turns bright (Mercury in twilight, the Moon by day). From another planet that sky is not applied; the Moon stays as seen from Earth. The Sun's disk keeps its color, with a pale aureole around it.
 
 ### Date and time
 
@@ -357,9 +374,10 @@ After adding or changing a file, **change the time by one minute or click the vi
 3. Open **Lune** for the Moon.
 4. Open **Soleil** for the Sun as it is now, on the computer's clock.
 5. Toggle **Nord vers le bas** to match your observing habit.
-6. In **Animation**, set the step, then press **Lecture**, **Reculer**, or **1 fois**.
-7. On **Lune** or **Soleil**, the wheel magnifies. **Grossissement par défaut** restores the opening size.
-8. On **Planètes à l'échelle**, choose **Vu depuis**, or double-click a planet for its moons.
+6. Check **Vision réelle des objets** for eyepiece-like brightness and sky.
+7. In **Animation**, set the step, then press **Lecture**, **Reculer**, or **1 fois**.
+8. On **Lune** or **Soleil**, the wheel magnifies. **Grossissement par défaut** restores the opening size.
+9. On **Planètes à l'échelle**, choose **Vu depuis**, or double-click a planet for its moons.
 
 ---
 

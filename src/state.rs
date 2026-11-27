@@ -138,6 +138,8 @@ pub struct Observation {
     pub waiting_for_image: bool,
     /// Origine des vues Planètes et Soleil. La Lune reste géocentrique.
     pub viewpoint: Viewpoint,
+    /// Luminosité d'oculaire et ciel derrière l'objet. Décoché : rendu détaillé actuel.
+    pub real_vision: bool,
 }
 
 impl Observation {
@@ -151,6 +153,7 @@ impl Observation {
             next_step: None,
             waiting_for_image: false,
             viewpoint: Viewpoint::Earth,
+            real_vision: false,
         }
     }
 }

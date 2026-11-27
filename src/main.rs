@@ -14,6 +14,7 @@ mod soleil_panel;
 mod state;
 mod sun_image;
 mod time_panel;
+mod vision;
 
 use egui::Color32;
 use moon_panel::MoonPanel;
@@ -91,6 +92,12 @@ impl eframe::App for DubPlanetar {
         egui::CentralPanel::default()
             .frame(egui::Frame::central_panel(ui.style()).fill(sky))
             .show(ui, |ui| {
+                ui.add_space(6.0);
+                ui.checkbox(
+                    &mut self.observation.real_vision,
+                    "Vision réelle des objets",
+                );
+                ui.add_space(2.0);
                 self.panels[self.current].ui(ui, &mut self.observation);
             });
         animation::tick(ui.ctx(), &mut self.observation);

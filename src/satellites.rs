@@ -77,7 +77,7 @@ pub fn system(body: Body, jd: f64) -> Option<MoonSystem> {
         _ => Vec::new(),
     };
     let phase_deg = app.phase_angle_rad.to_degrees();
-    let planet_magnitude = planet_magnitude(
+    let planet_magnitude = crate::vision::visual_magnitude(
         body,
         planet.length(),
         app.distance_au,
@@ -272,21 +272,6 @@ fn shadow_on_planet(moon: Vec3, to_sun: Vec3, to_observer: Vec3, radius_km: f64)
         return None;
     }
     Some(point)
-}
-
-fn planet_magnitude(body: Body, r_au: f64, delta_au: f64, phase_deg: f64, lat_deg: f64) -> f64 {
-    let base = 5.0 * (r_au * delta_au).max(1e-12).log10();
-    match body {
-        Body::Mars => -1.52 + base + 0.016 * phase_deg,
-        Body::Jupiter => -9.40 + base + 0.005 * phase_deg,
-        Body::Saturn => {
-            let b = lat_deg.to_radians().sin().abs();
-            -8.88 + base + 0.044 * phase_deg - 2.60 * b + 1.25 * b * b
-        }
-        Body::Uranus => -7.19 + base,
-        Body::Neptune => -6.87 + base,
-        _ => base,
-    }
 }
 
 fn equator_node(pole: Vec3) -> (Vec3, Vec3) {

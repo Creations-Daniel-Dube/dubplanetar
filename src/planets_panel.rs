@@ -14,6 +14,7 @@ use crate::raster_pump::{self, DiskJob, RasterPump};
 use crate::satellite_window::SatelliteWindow;
 use crate::satellites;
 use crate::state::{Observation, Viewpoint};
+use crate::vision;
 
 const HEADER_H: f32 = 118.0;
 const LABEL_H: f32 = 54.0;
@@ -56,6 +57,8 @@ struct StoredMap {
 struct Cached {
     key: RasterKey,
     north_down: bool,
+    /// −1 : rendu détaillé. Sinon gain réel quantifié.
+    grade_q: i32,
     north_up: RgbaImage,
     texture: egui::TextureHandle,
 }
@@ -66,6 +69,8 @@ struct RasterKey {
     radius_px: i32,
     stamp: Option<(u64, u64)>,
     viewpoint: Viewpoint,
+    /// Trait bleu du pôle, absent en vision réelle.
+    axis: bool,
 }
 
 impl Panel for PlanetsPanel {
@@ -132,6 +137,8 @@ impl Panel for PlanetsPanel {
         );
         viewpoint_picker(ui, observation, full.left() + 268.0, full.top() + 84.0);
 
+        let real = observation.real_vision;
+        let lon = vision::longitude_deg(observation.when);
         let minute = (jd * 1440.0).round() as i64;
         let mut specs = Vec::new();
         for (slot, (body, app)) in slots.iter().zip(views.iter()) {
@@ -144,8 +151,10 @@ impl Panel for PlanetsPanel {
             ui.ctx(),
             &specs,
             minute,
+            jd,
             observation.north_down,
             observation.viewpoint,
+            real,
         );
         if busy {
             observation.waiting_for_image = true;
@@ -160,6 +169,34 @@ impl Panel for PlanetsPanel {
                 let (_, area_h) = image_room(slot.rect);
                 let center = egui::pos2(slot.rect.center().x, slot.rect.top() + 4.0 + area_h * 0.5);
                 let image_rect = egui::Rect::from_center_size(center, display);
+                if real {
+                    let (_, area_h) = image_room(slot.rect);
+                    let zone = egui::Rect::from_min_max(
+                        slot.rect.min,
+                        egui::pos2(slot.rect.right(), slot.rect.top() + 4.0 + area_h),
+                    );
+                    if let Some(backdrop) =
+                        vision::sky_behind(*body, observation.viewpoint, app, jd, lon)
+                    {
+                        painter.rect(
+                            image_rect.expand(16.0).intersect(zone),
+                            12.0,
+                            backdrop.color,
+                            egui::Stroke::NONE,
+                            egui::StrokeKind::Inside,
+                        );
+                    }
+                    let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
+                    let clip = painter.with_clip_rect(zone);
+                    vision::paint_halo(
+                        &clip,
+                        image_rect.center(),
+                        radius,
+                        vision::gain_for(*body, app, jd),
+                        app.illuminated,
+                        false,
+                    );
+                }
                 let response = ui.put(
                     image_rect,
                     egui::Image::from_texture(&cached.texture)
@@ -195,8 +232,10 @@ impl PlanetsPanel {
         ctx: &egui::Context,
         specs: &[(Body, Appearance, i32, &Slot)],
         minute: i64,
+        jd: f64,
         north_down: bool,
         viewpoint: Viewpoint,
+        real: bool,
     ) -> bool {
         let ready = self.pump.poll();
         for done in ready {
@@ -212,7 +251,11 @@ impl PlanetsPanel {
             else {
                 continue;
             };
-            self.install(ctx, body, key, north_down, done.image);
+            if key.axis != !real {
+                continue;
+            }
+            let grade = grade_of(real, body, specs, jd);
+            self.install(ctx, body, key, north_down, grade, done.image);
         }
 
         let mut missing = Vec::new();
@@ -223,13 +266,21 @@ impl PlanetsPanel {
                 radius_px: *radius_px,
                 stamp,
                 viewpoint,
+                axis: !real,
             };
+            let grade = if real {
+                Some(vision::gain_for(*body, app, jd))
+            } else {
+                None
+            };
+            let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
             if let Some(cached) = self.cache.get_mut(body) {
                 if cached.key == key {
-                    if cached.north_down != north_down {
-                        let color = color_image(&cached.north_up, north_down);
+                    if cached.north_down != north_down || cached.grade_q != grade_q {
+                        let color = vision::present_disk(&cached.north_up, north_down, grade);
                         cached.texture.set(color, egui::TextureOptions::LINEAR);
                         cached.north_down = north_down;
+                        cached.grade_q = grade_q;
                     }
                     continue;
                 }
@@ -262,7 +313,7 @@ impl PlanetsPanel {
                     bump: None,
                     bump_path: None,
                     rings: body.ring_zones(),
-                    draw_axis: true,
+                    draw_axis: !real,
                     radius_px: f64::from(*radius_px),
                     max_side: 1000,
                 });
@@ -295,13 +346,16 @@ impl PlanetsPanel {
         body: Body,
         key: RasterKey,
         north_down: bool,
+        grade: Option<f64>,
         north_up: RgbaImage,
     ) {
-        let color = color_image(&north_up, north_down);
+        let color = vision::present_disk(&north_up, north_down, grade);
+        let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         if let Some(cached) = self.cache.get_mut(&body) {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
             cached.key = key;
             cached.north_down = north_down;
+            cached.grade_q = grade_q;
             cached.north_up = north_up;
         } else {
             let texture = ctx.load_texture(
@@ -314,12 +368,28 @@ impl PlanetsPanel {
                 Cached {
                     key,
                     north_down,
+                    grade_q,
                     north_up,
                     texture,
                 },
             );
         }
     }
+}
+
+fn grade_of(
+    real: bool,
+    body: Body,
+    specs: &[(Body, Appearance, i32, &Slot)],
+    jd: f64,
+) -> Option<f64> {
+    if !real {
+        return None;
+    }
+    specs
+        .iter()
+        .find(|(candidate, _, _, _)| *candidate == body)
+        .map(|(_, app, _, _)| vision::gain_for(body, app, jd))
 }
 
 fn body_id(body: Body) -> u64 {
@@ -349,31 +419,6 @@ fn body_from_id(id: u64) -> Option<Body> {
         8 => Body::Earth,
         _ => return None,
     })
-}
-
-fn color_image(north_up: &RgbaImage, north_down: bool) -> egui::ColorImage {
-    let owned;
-    let image = if north_down {
-        owned = flip_180(north_up);
-        &owned
-    } else {
-        north_up
-    };
-    egui::ColorImage::from_rgba_unmultiplied(
-        [image.width() as usize, image.height() as usize],
-        image.as_raw(),
-    )
-}
-
-fn flip_180(src: &RgbaImage) -> RgbaImage {
-    let (w, h) = src.dimensions();
-    let mut dst = RgbaImage::new(w, h);
-    for y in 0..h {
-        for x in 0..w {
-            dst.put_pixel(w - 1 - x, h - 1 - y, *src.get_pixel(x, y));
-        }
-    }
-    dst
 }
 
 struct Slot {
