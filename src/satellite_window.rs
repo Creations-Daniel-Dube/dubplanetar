@@ -210,14 +210,14 @@ impl SatelliteWindow {
             }
             let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
             let clip = painter.with_clip_rect(sky);
-            vision::paint_halo(
+            vision::paint_glare(
                 &clip,
                 ui.ctx(),
                 center,
                 radius,
                 gain,
                 app.illuminated,
-                false,
+                vision::glare_of(planet, gain, app.illuminated),
             );
         }
         if let Some(cached) = &self.cache {
@@ -275,7 +275,17 @@ impl SatelliteWindow {
             if self.token == done.token {
                 if let Some(key) = self.pending.clone() {
                     if key.axis == !real {
-                        self.install(ctx, key, gain_q, gain, real, north_down, done.image);
+                        self.install(
+                            ctx,
+                            key,
+                            gain_q,
+                            gain,
+                            real,
+                            north_down,
+                            planet,
+                            app.illuminated,
+                            done.image,
+                        );
                     }
                 }
             }
@@ -292,7 +302,14 @@ impl SatelliteWindow {
             if cached.key == key {
                 if cached.north_down != north_down || cached.gain_q != gain_q || cached.real != real
                 {
-                    let color = grade_disk(&cached.north_up, gain, real, north_down);
+                    let color = grade_disk(
+                        &cached.north_up,
+                        gain,
+                        real,
+                        north_down,
+                        planet,
+                        app.illuminated,
+                    );
                     cached.texture.set(color, egui::TextureOptions::LINEAR);
                     cached.north_down = north_down;
                     cached.gain_q = gain_q;
@@ -345,9 +362,11 @@ impl SatelliteWindow {
         gain: f64,
         real: bool,
         north_down: bool,
+        planet: Body,
+        illuminated: f64,
         north_up: RgbaImage,
     ) {
-        let color = grade_disk(&north_up, gain, real, north_down);
+        let color = grade_disk(&north_up, gain, real, north_down, planet, illuminated);
         if let Some(cached) = &mut self.cache {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
             cached.key = key;
@@ -369,9 +388,22 @@ impl SatelliteWindow {
     }
 }
 
-fn grade_disk(src: &RgbaImage, gain: f64, real: bool, north_down: bool) -> egui::ColorImage {
+fn grade_disk(
+    src: &RgbaImage,
+    gain: f64,
+    real: bool,
+    north_down: bool,
+    body: Body,
+    illuminated: f64,
+) -> egui::ColorImage {
     if real {
-        vision::present_disk(src, north_down, Some(gain))
+        vision::present_disk(
+            src,
+            north_down,
+            Some(gain),
+            vision::cast_of(body),
+            vision::glare_of(body, gain, illuminated),
+        )
     } else {
         colorize(src, gain, north_down)
     }
@@ -556,7 +588,7 @@ impl SatelliteWindow {
             96,
         );
         let color = if real {
-            vision::present_disk(&image, false, Some(gain))
+            vision::present_disk(&image, false, Some(gain), vision::Cast::Neutral, vision::Glare::None)
         } else {
             let tinted = tint_disk(&image, gain);
             egui::ColorImage::from_rgba_unmultiplied(

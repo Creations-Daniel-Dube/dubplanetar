@@ -170,6 +170,8 @@ impl Panel for PlanetsPanel {
                 let center = egui::pos2(slot.rect.center().x, slot.rect.top() + 4.0 + area_h * 0.5);
                 let image_rect = egui::Rect::from_center_size(center, display);
                 if real {
+                    let gain = vision::gain_for(*body, app, jd);
+                    let glare = vision::glare_of(*body, gain, app.illuminated);
                     let (_, area_h) = image_room(slot.rect);
                     let zone = egui::Rect::from_min_max(
                         slot.rect.min,
@@ -180,7 +182,11 @@ impl Panel for PlanetsPanel {
                     if let Some(backdrop) =
                         vision::sky_behind(*body, observation.viewpoint, app, jd, lon)
                     {
-                        let reach = (radius * 2.2).max(26.0);
+                        let reach = if glare == vision::Glare::Wash {
+                            (radius * 3.6).max(40.0)
+                        } else {
+                            (radius * 2.2).max(26.0)
+                        };
                         vision::paint_soft_disc(
                             &clip,
                             ui.ctx(),
@@ -189,14 +195,14 @@ impl Panel for PlanetsPanel {
                             backdrop.color,
                         );
                     }
-                    vision::paint_halo(
+                    vision::paint_glare(
                         &clip,
                         ui.ctx(),
                         image_rect.center(),
                         radius,
-                        vision::gain_for(*body, app, jd),
+                        gain,
                         app.illuminated,
-                        false,
+                        glare,
                     );
                 }
                 let response = ui.put(
@@ -257,7 +263,12 @@ impl PlanetsPanel {
                 continue;
             }
             let grade = grade_of(real, body, specs, jd);
-            self.install(ctx, body, key, north_down, grade, done.image);
+            let illum = specs
+                .iter()
+                .find(|(candidate, _, _, _)| *candidate == body)
+                .map(|(_, app, _, _)| app.illuminated)
+                .unwrap_or(1.0);
+            self.install(ctx, body, key, north_down, grade, illum, done.image);
         }
 
         let mut missing = Vec::new();
@@ -279,7 +290,13 @@ impl PlanetsPanel {
             if let Some(cached) = self.cache.get_mut(body) {
                 if cached.key == key {
                     if cached.north_down != north_down || cached.grade_q != grade_q {
-                        let color = vision::present_disk(&cached.north_up, north_down, grade);
+                        let color = vision::present_disk(
+                            &cached.north_up,
+                            north_down,
+                            grade,
+                            vision::cast_of(*body),
+                            shown_glare(grade, *body, app.illuminated),
+                        );
                         cached.texture.set(color, egui::TextureOptions::LINEAR);
                         cached.north_down = north_down;
                         cached.grade_q = grade_q;
@@ -349,9 +366,16 @@ impl PlanetsPanel {
         key: RasterKey,
         north_down: bool,
         grade: Option<f64>,
+        illuminated: f64,
         north_up: RgbaImage,
     ) {
-        let color = vision::present_disk(&north_up, north_down, grade);
+        let color = vision::present_disk(
+            &north_up,
+            north_down,
+            grade,
+            vision::cast_of(body),
+            shown_glare(grade, body, illuminated),
+        );
         let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         if let Some(cached) = self.cache.get_mut(&body) {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
@@ -376,6 +400,13 @@ impl PlanetsPanel {
                 },
             );
         }
+    }
+}
+
+fn shown_glare(grade: Option<f64>, body: Body, illuminated: f64) -> vision::Glare {
+    match grade {
+        Some(gain) => vision::glare_of(body, gain, illuminated),
+        None => vision::Glare::None,
     }
 }
 

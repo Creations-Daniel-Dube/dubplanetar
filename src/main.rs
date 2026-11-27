@@ -1,3 +1,8 @@
+// ***************************************************
+// * Créations Daniel Dubé            Daniel Dubé    *
+// * Dernières Modifications -->   2026-11-27        *
+// ***************************************************
+
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod animation;

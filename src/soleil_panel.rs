@@ -129,22 +129,23 @@ impl Panel for SoleilPanel {
             let image_rect = egui::Rect::from_center_size(room.center(), display);
             if observation.real_vision {
                 let clip = ui.painter().with_clip_rect(room);
-                vision::paint_halo(
-                    &clip,
-                    ui.ctx(),
-                    image_rect.center(),
-                    side * 0.5,
-                    40.0,
-                    1.0,
-                    true,
+                let radius = side * 0.5;
+                vision::paint_sun_aureole(&clip, ui.ctx(), image_rect.center(), radius);
+                ui.painter().with_clip_rect(room).image(
+                    texture.id(),
+                    image_rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    egui::Color32::WHITE,
+                );
+                vision::paint_sun_veil(&clip, ui.ctx(), image_rect.center(), radius);
+            } else {
+                ui.painter().with_clip_rect(room).image(
+                    texture.id(),
+                    image_rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    egui::Color32::WHITE,
                 );
             }
-            ui.painter().with_clip_rect(room).image(
-                texture.id(),
-                image_rect,
-                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                egui::Color32::WHITE,
-            );
             if ui
                 .input(|i| i.pointer.hover_pos())
                 .is_some_and(|pos| image_rect.contains(pos))

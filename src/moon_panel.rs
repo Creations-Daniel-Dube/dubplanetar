@@ -159,14 +159,14 @@ impl Panel for MoonPanel {
             if let Some(gain) = grade {
                 let radius = display.x * 0.5 / Body::Moon.canvas_extent() as f32;
                 let clip = ui.painter().with_clip_rect(room);
-                vision::paint_halo(
+                vision::paint_glare(
                     &clip,
                     ui.ctx(),
                     image_rect.center(),
                     radius,
                     gain,
                     app.illuminated,
-                    false,
+                    vision::glare_of(Body::Moon, gain, app.illuminated),
                 );
             }
             ui.painter().with_clip_rect(room).image(
@@ -217,7 +217,7 @@ impl MoonPanel {
                 self.bump = done.loaded_bump.clone();
                 self.bump_stamp = key.bump;
                 self.bump_loaded = true;
-                self.install(ctx, key, north_down, grade, done.image);
+                self.install(ctx, key, north_down, grade, app.illuminated, done.image);
             }
         }
 
@@ -234,7 +234,13 @@ impl MoonPanel {
         if let Some(cached) = &mut self.raster {
             if cached.key == key {
                 if cached.north_down != north_down || cached.grade_q != grade_q {
-                    let color = vision::present_disk(&cached.north_up, north_down, grade);
+                    let color = vision::present_disk(
+                        &cached.north_up,
+                        north_down,
+                        grade,
+                        vision::Cast::Neutral,
+                        moon_glare(grade, app.illuminated),
+                    );
                     cached.texture.set(color, egui::TextureOptions::LINEAR);
                     cached.north_down = north_down;
                     cached.grade_q = grade_q;
@@ -293,9 +299,16 @@ impl MoonPanel {
         key: RasterKey,
         north_down: bool,
         grade: Option<f64>,
+        illuminated: f64,
         north_up: RgbaImage,
     ) {
-        let color = vision::present_disk(&north_up, north_down, grade);
+        let color = vision::present_disk(
+            &north_up,
+            north_down,
+            grade,
+            vision::Cast::Neutral,
+            moon_glare(grade, illuminated),
+        );
         let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         if let Some(cached) = &mut self.raster {
             cached.texture.set(color, egui::TextureOptions::LINEAR);
@@ -313,6 +326,13 @@ impl MoonPanel {
                 texture,
             });
         }
+    }
+}
+
+fn moon_glare(grade: Option<f64>, illuminated: f64) -> vision::Glare {
+    match grade {
+        Some(gain) => vision::glare_of(Body::Moon, gain, illuminated),
+        None => vision::Glare::None,
     }
 }
 

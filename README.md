@@ -35,9 +35,9 @@ Quatre entrées mènent aux parties du logiciel :
 
 Case en haut de chaque écran, et dans la fenêtre des satellites. Décochée par défaut : les disques restent éclairés pour montrer le détail (phase, cartes, relief).
 
-Cochée, la luminosité suit la magnitude visuelle, dans l'esprit d'un télescope de 305 mm d'ouverture. Vénus devient un disque presque blanc, avec un halo. Uranus et Neptune restent visibles, plus sombres, et gardent leur couleur. Le trait bleu de l'axe du pôle disparaît : ce n'est pas de la lumière.
+Cochée, la luminosité suit la magnitude visuelle, dans l'esprit d'un télescope de 305 mm d'ouverture. Mercure et Vénus deviennent un reflet éblouissant : disque blanc, halo large, limbe fondu dans le ciel. Mars reste rosée, et ses zones sombres restent lisibles. Jupiter, Saturne et la Lune sont très lumineux, mais les bandes et les mers ne disparaissent pas. Uranus est un disque vert pâle, Neptune un disque bleu plus sombre. Le trait bleu de l'axe du pôle disparaît : ce n'est pas de la lumière.
 
-Le fond juste derrière chaque disque imite le ciel terrestre à 45° N, avec la longitude du fuseau horaire de l'ordinateur. Loin du Soleil, la nuit, il est presque noir (Saturne à l'opposition). Près du Soleil, ou en plein jour, il devient clair (Mercure au crépuscule, Lune de jour). Depuis une autre planète, ce ciel ne s'applique pas : la Lune, elle, reste vue de la Terre. Le disque du Soleil garde sa couleur ; une auréole claire l'entoure.
+Le fond juste derrière chaque disque imite le ciel terrestre à 45° N, avec la longitude du fuseau horaire de l'ordinateur. Loin du Soleil, la nuit, il est presque noir (Saturne à l'opposition). Près du Soleil, ou en plein jour, il devient clair (Mercure au crépuscule, Lune de jour). Depuis une autre planète, ce ciel ne s'applique pas : la Lune, elle, reste vue de la Terre. Le disque du Soleil garde la couleur de la photo ; une large auréole claire l'enveloppe, et un voile blanc couvre le centre.
 
 ### Date et heure
 
