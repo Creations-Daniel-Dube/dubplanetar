@@ -161,6 +161,7 @@ impl Panel for MoonPanel {
                 let clip = ui.painter().with_clip_rect(room);
                 vision::paint_halo(
                     &clip,
+                    ui.ctx(),
                     image_rect.center(),
                     radius,
                     gain,

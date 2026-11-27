@@ -129,7 +129,15 @@ impl Panel for SoleilPanel {
             let image_rect = egui::Rect::from_center_size(room.center(), display);
             if observation.real_vision {
                 let clip = ui.painter().with_clip_rect(room);
-                vision::paint_halo(&clip, image_rect.center(), side * 0.5, 40.0, 1.0, true);
+                vision::paint_halo(
+                    &clip,
+                    ui.ctx(),
+                    image_rect.center(),
+                    side * 0.5,
+                    40.0,
+                    1.0,
+                    true,
+                );
             }
             ui.painter().with_clip_rect(room).image(
                 texture.id(),

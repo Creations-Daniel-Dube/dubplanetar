@@ -175,21 +175,23 @@ impl Panel for PlanetsPanel {
                         slot.rect.min,
                         egui::pos2(slot.rect.right(), slot.rect.top() + 4.0 + area_h),
                     );
+                    let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
+                    let clip = painter.with_clip_rect(zone);
                     if let Some(backdrop) =
                         vision::sky_behind(*body, observation.viewpoint, app, jd, lon)
                     {
-                        painter.rect(
-                            image_rect.expand(16.0).intersect(zone),
-                            12.0,
+                        let reach = (radius * 2.2).max(26.0);
+                        vision::paint_soft_disc(
+                            &clip,
+                            ui.ctx(),
+                            image_rect.center(),
+                            reach,
                             backdrop.color,
-                            egui::Stroke::NONE,
-                            egui::StrokeKind::Inside,
                         );
                     }
-                    let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
-                    let clip = painter.with_clip_rect(zone);
                     vision::paint_halo(
                         &clip,
+                        ui.ctx(),
                         image_rect.center(),
                         radius,
                         vision::gain_for(*body, app, jd),

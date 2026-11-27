@@ -16,8 +16,9 @@ use crate::state::Viewpoint;
 const SB_REF: f64 = 9.5;
 /// Gain d'écran à cette référence : sombre, coloré, encore lisible.
 const GAIN_AT_REF: f64 = 0.22;
-/// 1 serait le flux linéaire. 0,55 garde un écart fort sans tout écrêter pareil.
-const GAIN_GAMMA: f64 = 0.55;
+/// Au-dessus de 1, les objets brillants partent vers le blanc plus vite que le flux.
+/// 0,55 laissait Jupiter et la Lune presque aussi posés qu'en rendu détaillé.
+const GAIN_GAMMA: f64 = 1.40;
 /// Site du ciel terrestre. La longitude vient du fuseau de l'heure locale.
 const SITE_LATITUDE_DEG: f64 = 45.0;
 /// Distance moyenne de la Lune, en UA.
@@ -183,31 +184,95 @@ pub fn tone_rgb(color: [u8; 3], gain: f64) -> egui::Color32 {
     )
 }
 
-/// Halo quand le disque sature. `illuminated` coupe le halo d'une nouvelle lune noire.
+/// Halo lisse. `illuminated` coupe le halo d'une nouvelle lune noire.
 pub fn paint_halo(
     painter: &egui::Painter,
+    ctx: &egui::Context,
     center: egui::Pos2,
     radius: f32,
     gain: f64,
     illuminated: f64,
     warm: bool,
 ) {
-    if gain <= 1.0 || radius < 1.0 || illuminated < 0.02 {
+    if gain <= 1.15 || radius < 1.0 || illuminated < 0.02 {
         return;
     }
-    let over = (1.0 - (-(gain - 1.0) * 0.45).exp()).clamp(0.0, 1.0);
-    let strength = over * illuminated.sqrt().clamp(0.0, 1.0);
-    let layers: [(f32, f32); 4] = [(1.25, 46.0), (1.8, 30.0), (2.7, 16.0), (4.0, 8.0)];
-    for (scale, alpha) in layers {
-        let a = (f64::from(alpha) * strength).round().clamp(0.0, 255.0) as u8;
-        let color = if warm {
-            egui::Color32::from_rgba_unmultiplied(255, 236, 200, a)
-        } else {
-            egui::Color32::from_rgba_unmultiplied(255, 255, 255, a)
-        };
-        painter.circle_filled(center, radius * scale, color);
-    }
+    let strength = (1.0 - (-(gain - 1.0) * 0.07).exp()).clamp(0.0, 1.0)
+        * illuminated.sqrt().clamp(0.0, 1.0);
+    let spread = (2.05 + 0.42 * gain.max(1.0).ln()).clamp(2.05, 3.5) as f32;
+    let alpha = (230.0 * strength).round().clamp(0.0, 255.0) as u8;
+    let tint = if warm {
+        egui::Color32::from_rgba_unmultiplied(255, 236, 200, alpha)
+    } else {
+        egui::Color32::from_rgba_unmultiplied(255, 255, 255, alpha)
+    };
+    paint_soft_disc(painter, ctx, center, radius * spread, tint);
 }
+
+/// Disque dont l'alpha suit une gaussienne, du centre vers le bord.
+pub fn paint_soft_disc(
+    painter: &egui::Painter,
+    ctx: &egui::Context,
+    center: egui::Pos2,
+    radius: f32,
+    tint: egui::Color32,
+) {
+    if radius < 1.0 || tint.a() == 0 {
+        return;
+    }
+    let tex = glow_texture(ctx);
+    let side = radius * 2.0;
+    painter.image(
+        tex.id(),
+        egui::Rect::from_center_size(center, egui::vec2(side, side)),
+        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+        tint,
+    );
+}
+
+fn glow_texture(ctx: &egui::Context) -> egui::TextureHandle {
+    let id = egui::Id::unique("vision-gaussian-glow");
+    if let Some(tex) = ctx.data(|data| data.get_temp::<egui::TextureHandle>(id)) {
+        return tex;
+    }
+    let tex = ctx.load_texture(
+        "vision-gaussian-glow",
+        gaussian_image(),
+        egui::TextureOptions::LINEAR,
+    );
+    ctx.data_mut(|data| data.insert_temp(id, tex.clone()));
+    tex
+}
+
+fn gaussian_image() -> egui::ColorImage {
+    const N: usize = 512;
+    let mut raw = vec![0_u8; N * N * 4];
+    let half = (N as f32 - 1.0) * 0.5;
+    let sigma = half * 0.46;
+    let inv = 1.0 / (2.0 * sigma * sigma);
+    for y in 0..N {
+        for x in 0..N {
+            let dx = x as f32 - half;
+            let dy = y as f32 - half;
+            let g = (-(dx * dx + dy * dy) * inv).exp();
+            let dither = f32::from(BAYER[(y & 7) * 8 + (x & 7)]) / 64.0 - 0.5;
+            let a = (g * 255.0 + dither).round().clamp(0.0, 255.0) as u8;
+            let i = (y * N + x) * 4;
+            raw[i] = 255;
+            raw[i + 1] = 255;
+            raw[i + 2] = 255;
+            raw[i + 3] = a;
+        }
+    }
+    egui::ColorImage::from_rgba_unmultiplied([N, N], &raw)
+}
+
+/// Trame 8×8, 0…63, pour casser les paliers quand la texture est étirée.
+const BAYER: [u8; 64] = [
+    0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60,
+    28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47,
+    7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21,
+];
 
 /// Longitude est, en degrés, déduite du fuseau de l'heure locale (15° par heure).
 pub fn longitude_deg(when: DateTime<Local>) -> f64 {
@@ -376,6 +441,17 @@ mod tests {
     fn gmst_at_j2000_matches_meeus() {
         let deg = gmst_rad(2_451_545.0).to_degrees();
         assert!((deg - 280.460_618_37).abs() < 1e-6, "{deg}");
+    }
+
+    #[test]
+    fn jupiter_clips_white_while_neptune_stays_dim() {
+        let jupiter = disk_gain(5.4);
+        let neptune = disk_gain(9.4);
+        let jupiter_px = tone_channel(200, jupiter);
+        let neptune_px = tone_channel(200, neptune);
+        assert!(jupiter_px > 230, "Jupiter {jupiter_px} gain {jupiter}");
+        assert!(neptune_px < 90, "Neptune {neptune_px} gain {neptune}");
+        assert!(jupiter > neptune * 25.0, "{jupiter} vs {neptune}");
     }
 
     #[test]

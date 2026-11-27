@@ -210,7 +210,15 @@ impl SatelliteWindow {
             }
             let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
             let clip = painter.with_clip_rect(sky);
-            vision::paint_halo(&clip, center, radius, gain, app.illuminated, false);
+            vision::paint_halo(
+                &clip,
+                ui.ctx(),
+                center,
+                radius,
+                gain,
+                app.illuminated,
+                false,
+            );
         }
         if let Some(cached) = &self.cache {
             let [w, h] = cached.texture.size();
