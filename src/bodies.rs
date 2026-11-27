@@ -17,6 +17,7 @@ pub enum Body {
     Saturn,
     Uranus,
     Neptune,
+    Earth,
     Moon,
 }
 
@@ -41,6 +42,7 @@ impl Body {
             Body::Saturn => "Saturne",
             Body::Uranus => "Uranus",
             Body::Neptune => "Neptune",
+            Body::Earth => "Terre",
             Body::Moon => "Lune",
         }
     }
@@ -54,6 +56,7 @@ impl Body {
             Body::Saturn => "saturn",
             Body::Uranus => "uranus",
             Body::Neptune => "neptune",
+            Body::Earth => "earth",
             Body::Moon => "moon",
         }
     }
@@ -69,6 +72,7 @@ impl Body {
             Body::Saturn => (60_268.0, 54_364.0),
             Body::Uranus => (25_559.0, 24_973.0),
             Body::Neptune => (24_764.0, 24_341.0),
+            Body::Earth => (6_378.1, 6_356.8),
             Body::Moon => (1_737.4, 1_737.4),
         }
     }
@@ -88,6 +92,7 @@ impl Body {
             Body::Saturn => [224, 196, 140],
             Body::Uranus => [170, 220, 214],
             Body::Neptune => [70, 110, 230],
+            Body::Earth => [72, 130, 190],
             Body::Moon => [186, 186, 180],
         }
     }

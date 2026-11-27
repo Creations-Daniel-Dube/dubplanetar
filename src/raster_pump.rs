@@ -256,7 +256,7 @@ mod tests {
                 x_axis: Vec3::new(1.0, 0.0, 0.0),
                 y_axis: Vec3::new(0.0, 1.0, 0.0),
                 z_axis: Vec3::new(0.0, 0.0, 1.0),
-                to_earth: Vec3::new(1.0, 0.0, 0.0),
+                to_observer: Vec3::new(1.0, 0.0, 0.0),
                 to_sun: Vec3::new(1.0, 0.0, 0.0),
             },
             flattening: 0.0,

@@ -318,7 +318,7 @@ fn tooltip(app: &Appearance) -> String {
         fr_num(app.eq_diameter_arcsec / 60.0, 1),
         (app.illuminated * 100.0).round() as i32,
         fr_num(app.phase_angle_rad.to_degrees(), 1),
-        fr_num(app.sub_earth_lat_rad.to_degrees(), 1),
+        fr_num(app.sub_observer_lat_rad.to_degrees(), 1),
     )
 }
 

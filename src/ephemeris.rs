@@ -1,12 +1,15 @@
-//! Positions, tailles apparentes et orientation vues de la Terre.
+//! Positions, tailles apparentes et orientation.
 //!
 //! VSOP87A donne des coordonnées écliptiques J2000. Une itération de temps de lumière
 //! place la planète au moment où la lumière que l'on reçoit en est partie.
 //! L'axe et le méridien suivent le rapport IAU WGCCRE 2015 (termes principaux).
+//! L'origine est la Terre, sauf si un autre `Viewpoint` est demandé. La Lune reste
+//! toujours vue de la Terre.
 
 use chrono::{DateTime, Utc};
 
 use crate::bodies::Body;
+use crate::state::Viewpoint;
 
 const AU_KM: f64 = 149_597_870.7;
 const ARCSEC_PER_RAD: f64 = 206_264.806_247_096_36;
@@ -90,8 +93,8 @@ pub struct Orientation {
     pub x_axis: Vec3,
     pub y_axis: Vec3,
     pub z_axis: Vec3,
-    /// Depuis le centre de la planète vers la Terre.
-    pub to_earth: Vec3,
+    /// Depuis le centre de la planète vers l'observateur.
+    pub to_observer: Vec3,
     /// Depuis le centre de la planète vers le Soleil.
     pub to_sun: Vec3,
 }
@@ -102,7 +105,7 @@ pub struct Appearance {
     pub eq_diameter_arcsec: f64,
     pub illuminated: f64,
     pub phase_angle_rad: f64,
-    pub sub_earth_lat_rad: f64,
+    pub sub_observer_lat_rad: f64,
     pub pole_pa_rad: f64,
     pub bright_limb_pa_rad: f64,
     pub flattening: f64,
@@ -115,29 +118,42 @@ pub fn julian_day_utc(dt: DateTime<Utc>) -> f64 {
 }
 
 pub fn appearance(body: Body, jd: f64) -> Appearance {
-    if body == Body::Moon {
+    appearance_from(body, Viewpoint::Earth, jd)
+}
+
+/// Disque de `target` vu depuis `viewpoint` à l'instant `jd`.
+///
+/// La Lune ignore `viewpoint` et reste géocentrique. L'observateur est pris à `jd`,
+/// la cible une itération de temps de lumière plus tôt.
+pub fn appearance_from(target: Body, viewpoint: Viewpoint, jd: f64) -> Appearance {
+    if target == Body::Moon {
         return moon_appearance(jd);
     }
-    let earth = equatorial_earth(jd);
-    let mut planet = equatorial_planet(body, jd);
-    let light_days = (planet - earth).length() * LIGHT_DAYS_PER_AU;
-    planet = equatorial_planet(body, jd - light_days);
+    debug_assert_ne!(
+        viewpoint.as_body(),
+        target,
+        "la cible ne peut pas être l'observateur"
+    );
+    let observer = heliocentric(viewpoint.as_body(), jd);
+    let mut planet = heliocentric(target, jd);
+    let light_days = (planet - observer).length() * LIGHT_DAYS_PER_AU;
+    planet = heliocentric(target, jd - light_days);
 
-    let geo = planet - earth;
+    let geo = planet - observer;
     let distance = geo.length().max(1e-9);
-    let to_earth = -geo.normalized();
+    let to_observer = -geo.normalized();
     let to_sun = -planet.normalized();
 
-    let cos_i = to_earth.dot(to_sun).clamp(-1.0, 1.0);
-    let (eq_km, _) = body.radii_km();
+    let cos_i = to_observer.dot(to_sun).clamp(-1.0, 1.0);
+    let (eq_km, _) = target.radii_km();
     let eq_diameter = 2.0 * eq_km / (distance * AU_KM) * ARCSEC_PER_RAD;
 
-    let (alpha0, delta0, w_deg) = rotational_elements(body, jd - light_days);
-    let orientation = orientation_axes(alpha0, delta0, w_deg, to_earth, to_sun);
+    let (alpha0, delta0, w_deg) = rotational_elements(target, jd - light_days);
+    let orientation = orientation_axes(alpha0, delta0, w_deg, to_observer, to_sun);
 
     let planet_ra = geo.y.atan2(geo.x);
     let planet_dec = geo.z.atan2(geo.x.hypot(geo.y));
-    let sun = -earth;
+    let sun = -observer;
     let sun_ra = sun.y.atan2(sun.x);
     let sun_dec = sun.z.atan2(sun.x.hypot(sun.y));
 
@@ -146,7 +162,7 @@ pub fn appearance(body: Body, jd: f64) -> Appearance {
         eq_diameter_arcsec: eq_diameter,
         illuminated: (1.0 + cos_i) * 0.5,
         phase_angle_rad: cos_i.acos(),
-        sub_earth_lat_rad: orientation.z_axis.dot(to_earth).clamp(-1.0, 1.0).asin(),
+        sub_observer_lat_rad: orientation.z_axis.dot(to_observer).clamp(-1.0, 1.0).asin(),
         pole_pa_rad: position_angle(
             planet_ra,
             planet_dec,
@@ -154,7 +170,7 @@ pub fn appearance(body: Body, jd: f64) -> Appearance {
             delta0.to_radians(),
         ),
         bright_limb_pa_rad: position_angle(planet_ra, planet_dec, sun_ra, sun_dec),
-        flattening: body.flattening(),
+        flattening: target.flattening(),
         orientation,
     }
 }
@@ -171,7 +187,7 @@ fn orientation_axes(
     alpha0_deg: f64,
     delta0_deg: f64,
     w_deg: f64,
-    to_earth: Vec3,
+    to_observer: Vec3,
     to_sun: Vec3,
 ) -> Orientation {
     let z_axis = ra_dec_to_vec(alpha0_deg.to_radians(), delta0_deg.to_radians());
@@ -189,7 +205,7 @@ fn orientation_axes(
         x_axis,
         y_axis,
         z_axis,
-        to_earth,
+        to_observer,
         to_sun,
     }
 }
@@ -238,6 +254,7 @@ fn rotational_elements(body: Body, jd: f64) -> (f64, f64, f64) {
                 249.978 + 541.139_775_7 * d - 0.48 * deg_sin(n),
             )
         }
+        Body::Earth => (-0.641 * t, 90.0 - 0.557 * t, 190.147 + 360.985_623_5 * d),
         Body::Moon => moon_rotational_elements(d, t),
     }
 }
@@ -303,9 +320,19 @@ fn equatorial_planet(body: Body, jd: f64) -> Vec3 {
         Body::Saturn => vsop87::vsop87a::saturn(jd),
         Body::Uranus => vsop87::vsop87a::uranus(jd),
         Body::Neptune => vsop87::vsop87a::neptune(jd),
-        Body::Moon => unreachable!("la Lune n'est pas dans VSOP87"),
+        Body::Earth | Body::Moon => {
+            unreachable!("la Terre et la Lune ne passent pas par cette table")
+        }
     };
     ecliptic_to_equatorial(Vec3::new(c.x, c.y, c.z))
+}
+
+fn heliocentric(body: Body, jd: f64) -> Vec3 {
+    if body == Body::Earth {
+        equatorial_earth(jd)
+    } else {
+        equatorial_planet(body, jd)
+    }
 }
 
 fn equatorial_earth(jd: f64) -> Vec3 {
@@ -313,10 +340,11 @@ fn equatorial_earth(jd: f64) -> Vec3 {
     ecliptic_to_equatorial(Vec3::new(c.x, c.y, c.z))
 }
 
-/// Distance Terre–Soleil et diamètre apparent à l'instant `jd`.
+/// Distance observateur–Soleil et diamètre apparent à l'instant `jd`.
 ///
 /// Le Soleil est à l'origine de VSOP87 : la distance est la longueur du vecteur
-/// terrestre, en unités astronomiques. Pas de phase : le disque est toujours plein.
+/// héliocentrique de l'observateur, en unités astronomiques. Pas de phase : le
+/// disque est toujours plein.
 #[derive(Clone, Copy, Debug)]
 pub struct SunApparent {
     pub distance_au: f64,
@@ -324,7 +352,11 @@ pub struct SunApparent {
 }
 
 pub fn sun_apparent(jd: f64) -> SunApparent {
-    let distance_au = equatorial_earth(jd).length().max(1e-12);
+    sun_apparent_from(jd, Viewpoint::Earth)
+}
+
+pub fn sun_apparent_from(jd: f64, viewpoint: Viewpoint) -> SunApparent {
+    let distance_au = heliocentric(viewpoint.as_body(), jd).length().max(1e-12);
     let eq_diameter_arcsec = 2.0 * SOLAR_RADIUS_KM / (distance_au * AU_KM) * ARCSEC_PER_RAD;
     SunApparent {
         distance_au,
@@ -545,14 +577,14 @@ fn moon_appearance(jd: f64) -> Appearance {
 
     let distance = geo.length().max(1e-12);
     let moon = earth + geo;
-    let to_earth = -geo.normalized();
+    let to_observer = -geo.normalized();
     let to_sun = -moon.normalized();
-    let cos_i = to_earth.dot(to_sun).clamp(-1.0, 1.0);
+    let cos_i = to_observer.dot(to_sun).clamp(-1.0, 1.0);
     let (eq_km, _) = Body::Moon.radii_km();
     let eq_diameter = 2.0 * eq_km / (distance * AU_KM) * ARCSEC_PER_RAD;
 
     let (alpha0, delta0, w_deg) = rotational_elements(Body::Moon, jd - light_days);
-    let orientation = orientation_axes(alpha0, delta0, w_deg, to_earth, to_sun);
+    let orientation = orientation_axes(alpha0, delta0, w_deg, to_observer, to_sun);
 
     let moon_ra = geo.y.atan2(geo.x);
     let moon_dec = geo.z.atan2(geo.x.hypot(geo.y));
@@ -565,7 +597,7 @@ fn moon_appearance(jd: f64) -> Appearance {
         eq_diameter_arcsec: eq_diameter,
         illuminated: (1.0 + cos_i) * 0.5,
         phase_angle_rad: cos_i.acos(),
-        sub_earth_lat_rad: orientation.z_axis.dot(to_earth).clamp(-1.0, 1.0).asin(),
+        sub_observer_lat_rad: orientation.z_axis.dot(to_observer).clamp(-1.0, 1.0).asin(),
         pole_pa_rad: position_angle(moon_ra, moon_dec, alpha0.to_radians(), delta0.to_radians()),
         bright_limb_pa_rad: position_angle(moon_ra, moon_dec, sun_ra, sun_dec),
         flattening: Body::Moon.flattening(),
@@ -683,13 +715,13 @@ mod tests {
             let app = appearance(body, when);
             assert!(app.eq_diameter_arcsec.is_finite() && app.eq_diameter_arcsec > 0.0);
             assert!((0.0..=1.0).contains(&app.illuminated));
-            assert!(app.sub_earth_lat_rad.abs() <= std::f64::consts::FRAC_PI_2 + 1e-9);
+            assert!(app.sub_observer_lat_rad.abs() <= std::f64::consts::FRAC_PI_2 + 1e-9);
             assert!(app.pole_pa_rad.is_finite() && app.bright_limb_pa_rad.is_finite());
             let o = app.orientation;
             assert!((o.z_axis.length() - 1.0).abs() < 1e-9);
             assert!(o.x_axis.dot(o.y_axis).abs() < 1e-9);
             assert!((o.x_axis.cross(o.y_axis).dot(o.z_axis) - 1.0).abs() < 1e-6);
-            assert!((o.to_earth.length() - 1.0).abs() < 1e-9);
+            assert!((o.to_observer.length() - 1.0).abs() < 1e-9);
             assert!((o.to_sun.length() - 1.0).abs() < 1e-9);
         }
     }
@@ -761,7 +793,7 @@ mod tests {
     fn moon_libration_stays_within_the_limb() {
         for (year, month, day) in [(1992, 4, 12), (2012, 5, 6), (2026, 11, 26)] {
             let moon = appearance(Body::Moon, jd(year, month, day));
-            let lat = moon.sub_earth_lat_rad.to_degrees();
+            let lat = moon.sub_observer_lat_rad.to_degrees();
             assert!(
                 lat.abs() < 8.0,
                 "{year}-{month}-{day} : latitude sub-terrestre {lat:.2}°"
@@ -770,5 +802,46 @@ mod tests {
             let o = moon.orientation;
             assert!((o.x_axis.cross(o.y_axis).dot(o.z_axis) - 1.0).abs() < 1e-6);
         }
+    }
+
+    #[test]
+    fn geocentric_appearance_matches_the_earth_viewpoint() {
+        let when = jd(2012, 4, 15);
+        let from_helper = appearance(Body::Mars, when);
+        let from_explicit = appearance_from(Body::Mars, Viewpoint::Earth, when);
+        assert!((from_helper.distance_au - from_explicit.distance_au).abs() < 1e-12);
+        assert!((from_helper.illuminated - from_explicit.illuminated).abs() < 1e-12);
+        assert!((from_helper.eq_diameter_arcsec - from_explicit.eq_diameter_arcsec).abs() < 1e-9);
+    }
+
+    #[test]
+    fn earth_seen_from_mars_is_a_finite_disk() {
+        let app = appearance_from(Body::Earth, Viewpoint::Mars, jd(2012, 4, 15));
+        assert!(
+            (0.3..3.0).contains(&app.distance_au),
+            "distance {:.3} UA",
+            app.distance_au
+        );
+        assert!(app.eq_diameter_arcsec.is_finite() && app.eq_diameter_arcsec > 0.0);
+        assert!((0.0..=1.0).contains(&app.illuminated));
+        assert!((app.orientation.to_observer.length() - 1.0).abs() < 1e-9);
+        assert!((app.orientation.to_sun.length() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn jupiter_sun_distance_is_the_heliocentric_radius() {
+        let when = jd(2012, 4, 15);
+        let c = vsop87::vsop87a::jupiter(when);
+        let dist = (c.x * c.x + c.y * c.y + c.z * c.z).sqrt();
+        let sun = sun_apparent_from(when, Viewpoint::Jupiter);
+        assert!(
+            (sun.distance_au - dist).abs() < 1e-9,
+            "soleil {:.6} UA, vecteur {:.6} UA",
+            sun.distance_au,
+            dist
+        );
+        let earth = sun_apparent(when);
+        assert!(sun.distance_au > earth.distance_au);
+        assert!(sun.eq_diameter_arcsec < earth.eq_diameter_arcsec);
     }
 }

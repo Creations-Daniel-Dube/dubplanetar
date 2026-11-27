@@ -42,10 +42,10 @@ pub fn render_disk(input: &DiskInput<'_>, mut eq_radius_px: f64, max_side: i32) 
     let center = f64::from(half);
 
     let polar = (1.0 - input.flattening).clamp(0.05, 1.0);
-    let cam = camera(input.orientation.to_earth);
+    let cam = camera(input.orientation.to_observer);
     let los_b = to_body(input.orientation, cam.los);
     let sun_b = to_body(input.orientation, input.orientation.to_sun);
-    let earth_b = to_body(input.orientation, input.orientation.to_earth);
+    let observer_b = to_body(input.orientation, input.orientation.to_observer);
 
     for y in 0..size_u {
         for x in 0..size_u {
@@ -53,7 +53,7 @@ pub fn render_disk(input: &DiskInput<'_>, mut eq_radius_px: f64, max_side: i32) 
             let dy = (center - f64::from(y)) / eq_radius_px;
             let sky = cam.right * dx + cam.up * dy;
             let sky_b = to_body(input.orientation, sky);
-            let rgb = pixel_color(input, sky_b, los_b, sun_b, earth_b, polar, eq_radius_px);
+            let rgb = pixel_color(input, sky_b, los_b, sun_b, observer_b, polar, eq_radius_px);
             if let Some(rgb) = rgb {
                 img.put_pixel(x, y, Rgba([rgb[0], rgb[1], rgb[2], 255]));
             }
@@ -79,7 +79,7 @@ fn pixel_color(
     sky_b: Vec3,
     los_b: Vec3,
     sun_b: Vec3,
-    earth_b: Vec3,
+    observer_b: Vec3,
     polar: f64,
     eq_radius_px: f64,
 ) -> Option<[u8; 3]> {
@@ -89,7 +89,7 @@ fn pixel_color(
         sky_b,
         los_b,
         sun_b,
-        earth_b,
+        observer_b,
         polar,
         eq_radius_px,
     );
@@ -132,7 +132,7 @@ fn ring_hit(
     sky_b: Vec3,
     los_b: Vec3,
     sun_b: Vec3,
-    earth_b: Vec3,
+    observer_b: Vec3,
     polar: f64,
     eq_radius_px: f64,
 ) -> Option<SurfaceHit> {
@@ -157,7 +157,7 @@ fn ring_hit(
     let zone = zones
         .iter()
         .find(|z| z.brightness > 0.0 && rho >= z.inner && rho < z.outer)?;
-    let face = earth_b.z.signum();
+    let face = observer_b.z.signum();
     let illum = (face * sun_b.z).max(0.0);
     let light = if in_shadow(point, sun_b, polar) {
         0.08
@@ -170,7 +170,7 @@ fn ring_hit(
     })
 }
 
-/// Première intersection (côté Terre) d'un rayon orthographique avec le sphéroïde.
+/// Première intersection (côté observateur) d'un rayon orthographique avec le sphéroïde.
 fn spheroid_front(sky_b: Vec3, los_b: Vec3, polar: f64) -> Option<(f64, Vec3)> {
     let c2 = polar * polar;
     let a = los_b.x * los_b.x + los_b.y * los_b.y + los_b.z * los_b.z / c2;
@@ -377,8 +377,8 @@ struct Camera {
 }
 
 /// Nord céleste en haut, est à gauche : le +x de l'image est l'ouest.
-fn camera(to_earth: Vec3) -> Camera {
-    let los = -to_earth;
+fn camera(to_observer: Vec3) -> Camera {
+    let los = -to_observer;
     let icrf_north = Vec3::new(0.0, 0.0, 1.0);
     let mut up = icrf_north - los * icrf_north.dot(los);
     if up.length() < 1e-8 {
@@ -459,7 +459,7 @@ mod tests {
             x_axis: Vec3::new(1.0, 0.0, 0.0),
             y_axis: Vec3::new(0.0, 1.0, 0.0),
             z_axis: Vec3::new(0.0, 0.0, 1.0),
-            to_earth: Vec3::new(1.0, 0.0, 0.0),
+            to_observer: Vec3::new(1.0, 0.0, 0.0),
             to_sun,
         }
     }

@@ -72,9 +72,15 @@ Cette vue imite une page de revue d'astronomie : **toutes les planètes du Syst�
 - Décochée (par défaut) : **le Nord est vers le haut** (convention carte / photographie).
 - Cochée : comme dans un télescope astronomique inversé, **le Nord est vers le bas** à l'écran ; les textes restent lisibles.
 
+**Liste — Vu depuis**
+
+- Par défaut : **la Terre**. Mercure à Neptune gardent leurs places.
+- Une autre planète : la vue est celle qu'on aurait depuis cette planète. Elle quitte l'écran et **la Terre** occupe sa case, avec le diamètre, la phase et l'orientation recalculés.
+- Le même choix vaut pour l'onglet **Soleil**. La Lune, elle, reste vue de la Terre.
+
 **Survol de la souris**
 
-Passez la souris sur un disque pour un encadré détaillé : distance en unités astronomiques, diamètre, % éclairé, angle de phase, latitude sous-terrestre, orientation du pôle, angle du limbe éclairé.
+Passez la souris sur un disque pour un encadré détaillé : distance en unités astronomiques, diamètre, % éclairé, angle de phase, latitude sous l'observateur, orientation du pôle, angle du limbe éclairé.
 
 ### Lune
 
@@ -92,7 +98,9 @@ Même date et heure que les planètes, mais **un seul disque**, aussi grand que 
 
 Cet onglet **ne suit pas** la date des autres vues. Il affiche toujours le Soleil pour **l'heure actuelle de l'ordinateur**. Il n'a pas de bandeau d'animation.
 
-À chaque lancement, le logiciel télécharge l'image **SDO/HMI continuum** (quick-look NASA) et n'en garde que le disque : la légende en bas de la photo est retirée. Le Soleil n'a pas de phase : le cercle est toujours entier. Sa taille à l'écran suit la **vraie distance Terre–Soleil** (un peu plus grand début janvier, au périhélie, qu'au début juillet, à l'aphélie, soit environ 3 %).
+À chaque lancement, le logiciel télécharge l'image **SDO/HMI continuum** (quick-look NASA) et n'en garde que le disque : la légende en bas de la photo est retirée. Le Soleil n'a pas de phase : le cercle est toujours entier. Sa taille à l'écran suit la **vraie distance entre l'observateur et le Soleil**, avec le Soleil vu de **Mercure** comme référence : ce disque remplit le cadre, et les autres planètes sont plus petites dans le même rapport. Le texte sous le disque garde le diamètre réel en minutes d'arc. Depuis la Terre, il est un peu plus grand début janvier, au périhélie, qu'au début juillet, à l'aphélie (environ 3 %). Depuis Neptune le disque devient très petit. La photo reste celle vue de la Terre : seule la taille change.
+
+La liste **Vu depuis** est la même que dans **Planètes à l'échelle**.
 
 **En-tête** : titre, heure de l'ordinateur, origine de l'image, case **Nord vers le bas** (rotation de 180°, les textes restent lisibles).
 
@@ -120,6 +128,7 @@ Le logiciel **n'inclut pas** de photos NASA dans le dépôt. Vous pouvez enrichi
 |---------|--------|
 | `mercury.png`, `venus.png`, `mars.png` | Planètes |
 | `jupiter.png`, `saturn.png`, `uranus.png`, `neptune.png` | Planètes |
+| `earth.png` | Terre (même cadrage que les autres planètes) |
 | `moon.png` | Lune (carte équatoriale, nord en haut) |
 
 Formats acceptés : **PNG** ou **JPEG**. Les planètes utilisent la longitude 0° **à gauche** de l'image ; la Lune place la longitude 0° **au centre** (face principale au milieu).
@@ -133,7 +142,7 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 - Un seul instant à la fois (pas de comparaison entre plusieurs dates).
 - Pas de satellites, comètes ni astéroïdes.
 - Les photos des planètes et de la Lune sont des cartes fixes : pas de météo, pas de taches en évolution sur Jupiter, etc.
-- L'image du Soleil est le dernier continuum SDO/HMI disponible au lancement (souvent différé de quelques minutes), pas une reconstitution pour une date passée.
+- L'image du Soleil est le dernier continuum SDO/HMI disponible au lancement (souvent différé de quelques minutes), pas une reconstitution pour une date passée. Depuis une autre planète, cette photo ne tourne pas pour montrer l'hémisphère solaire qui lui fait face.
 - L'éclairage du relief lunaire accentue les pentes ; il ne calcule pas les ombres profondes dans les cratères.
 - Calculs pensés pour les usages amateurs (années 1000–2500) ; ce n'est pas un outil professionnel de mission spatiale.
 
@@ -210,9 +219,15 @@ All **major planets (Mercury to Neptune) at one instant**, on a **common scale i
 - Unchecked (default): **north at the top** (chart / photo convention).
 - Checked: **north at the bottom**, as in many astronomical telescopes; labels stay upright.
 
+**List — Vu depuis** (*Seen from*)
+
+- Default: **Earth**. Mercury through Neptune keep their usual places.
+- Another planet: the view is from that planet. It leaves the screen and **Earth** takes its cell, with diameter, phase, and orientation recomputed.
+- The same choice applies to the **Soleil** tab. The Moon stays as seen from Earth.
+
 **Mouse hover**
 
-Tooltip on each disk: distance (AU), diameter, illuminated %, phase angle, sub-Earth latitude, pole position angle, bright-limb angle.
+Tooltip on each disk: distance (AU), diameter, illuminated %, phase angle, sub-observer latitude, pole position angle, bright-limb angle.
 
 ### Moon
 
@@ -230,7 +245,9 @@ Same date and time as the planets, with a **single disk** as large as the frame 
 
 This tab **does not follow** the date used by the other views. It always shows the Sun for the **computer's current time**. It has no animation bar.
 
-On each launch the app downloads the NASA **SDO/HMI continuum** quick-look and keeps only the disk: the caption along the bottom of the photo is removed. The Sun has no phase, so the circle is always full. Its on-screen size follows the **true Earth–Sun distance** (slightly larger in early January, at perihelion, than in early July, at aphelion — about 3%).
+On each launch the app downloads the NASA **SDO/HMI continuum** quick-look and keeps only the disk: the caption along the bottom of the photo is removed. The Sun has no phase, so the circle is always full. Its on-screen size follows the **true distance from the chosen planet to the Sun**, with the Sun as seen from **Mercury** as the reference: that disk fills the frame, and the other planets are smaller in the same ratio. The caption under the disk keeps the real diameter in arcminutes. From Earth it is slightly larger in early January, at perihelion, than in early July, at aphelion (about 3%). From Neptune the disk becomes very small. The photo stays the one taken from Earth: only the size changes.
+
+The **Vu depuis** list is the same one as on **Planètes à l'échelle**.
 
 **Header**: title, computer time, image source, and the **Nord vers le bas** checkbox (a 180° turn; labels stay upright).
 
@@ -257,6 +274,7 @@ The app **does not ship** planetary photo maps. Place files in **`assets/texture
 | File | Body |
 |------|------|
 | `mercury.png` … `neptune.png` | Planets |
+| `earth.png` | Earth (same framing as the other planets) |
 | `moon.png` | Moon (equirectangular, north up) |
 
 **PNG** or **JPEG**. Planets: longitude 0° at the **left** edge of the map. Moon: longitude 0° at the **center** (near side centered).
@@ -270,7 +288,7 @@ After adding or changing a file, **change the time by one minute or click the vi
 - One instant at a time (no multi-date comparison).
 - No moons, comets, or asteroids.
 - Planet and Moon textures are static; no weather or evolving surface features.
-- The Sun picture is the latest SDO/HMI continuum available at launch (often a few minutes behind), not a reconstruction for a past date.
+- The Sun picture is the latest SDO/HMI continuum available at launch (often a few minutes behind), not a reconstruction for a past date. From another planet, that photo does not rotate to the solar hemisphere facing that planet.
 - Lunar bump shading exaggerates slopes; it does not model deep crater shadowing.
 - Suited to amateur use (years 1000–2500), not professional mission planning.
 

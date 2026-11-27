@@ -11,7 +11,7 @@ use crate::bodies::{self, Body};
 use crate::ephemeris::{self, Appearance};
 use crate::panel::Panel;
 use crate::raster_pump::{self, DiskJob, RasterPump};
-use crate::state::Observation;
+use crate::state::{Observation, Viewpoint};
 
 const HEADER_H: f32 = 118.0;
 const LABEL_H: f32 = 54.0;
@@ -59,6 +59,7 @@ struct RasterKey {
     minute: i64,
     radius_px: i32,
     stamp: Option<(u64, u64)>,
+    viewpoint: Viewpoint,
 }
 
 impl Panel for PlanetsPanel {
@@ -79,10 +80,15 @@ impl Panel for PlanetsPanel {
 
         let content = animation::content_rect(full);
         let jd = ephemeris::julian_day_utc(observation.when.with_timezone(&chrono::Utc));
-        let slots = layout_slots(content);
+        let slots = layout_slots(content, observation.viewpoint);
         let views: Vec<(Body, Appearance)> = slots
             .iter()
-            .map(|slot| (slot.body, ephemeris::appearance(slot.body, jd)))
+            .map(|slot| {
+                (
+                    slot.body,
+                    ephemeris::appearance_from(slot.body, observation.viewpoint, jd),
+                )
+            })
             .collect();
 
         let ppp = f64::from(ui.ctx().pixels_per_point());
@@ -118,6 +124,7 @@ impl Panel for PlanetsPanel {
             cb,
             egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
+        viewpoint_picker(ui, observation, full.left() + 268.0, full.top() + 84.0);
 
         let minute = (jd * 1440.0).round() as i64;
         let mut specs = Vec::new();
@@ -127,7 +134,13 @@ impl Panel for PlanetsPanel {
                 .max(1.0) as i32;
             specs.push((*body, *app, radius_px, slot));
         }
-        let busy = self.sync(ui.ctx(), &specs, minute, observation.north_down);
+        let busy = self.sync(
+            ui.ctx(),
+            &specs,
+            minute,
+            observation.north_down,
+            observation.viewpoint,
+        );
         if busy {
             observation.waiting_for_image = true;
             ui.ctx().request_repaint_after(Duration::from_millis(40));
@@ -162,6 +175,7 @@ impl PlanetsPanel {
         specs: &[(Body, Appearance, i32, &Slot)],
         minute: i64,
         north_down: bool,
+        viewpoint: Viewpoint,
     ) -> bool {
         let ready = self.pump.poll();
         for done in ready {
@@ -187,6 +201,7 @@ impl PlanetsPanel {
                 minute,
                 radius_px: *radius_px,
                 stamp,
+                viewpoint,
             };
             if let Some(cached) = self.cache.get_mut(body) {
                 if cached.key == key {
@@ -295,6 +310,7 @@ fn body_id(body: Body) -> u64 {
         Body::Saturn => 4,
         Body::Uranus => 5,
         Body::Neptune => 6,
+        Body::Earth => 8,
         Body::Moon => 7,
     }
 }
@@ -309,6 +325,7 @@ fn body_from_id(id: u64) -> Option<Body> {
         5 => Body::Uranus,
         6 => Body::Neptune,
         7 => Body::Moon,
+        8 => Body::Earth,
         _ => return None,
     })
 }
@@ -343,7 +360,24 @@ struct Slot {
     rect: egui::Rect,
 }
 
-fn layout_slots(full: egui::Rect) -> Vec<Slot> {
+fn viewpoint_picker(ui: &mut egui::Ui, observation: &mut Observation, x: f32, y: f32) {
+    let rect = egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(320.0, 26.0));
+    ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Vu depuis");
+            egui::ComboBox::from_id_salt("planets-viewpoint")
+                .selected_text(observation.viewpoint.label())
+                .width(150.0)
+                .show_ui(ui, |ui| {
+                    for choice in Viewpoint::ALL {
+                        ui.selectable_value(&mut observation.viewpoint, choice, choice.label());
+                    }
+                });
+        });
+    });
+}
+
+fn layout_slots(full: egui::Rect, viewpoint: Viewpoint) -> Vec<Slot> {
     let top = full.top() + HEADER_H;
     let body = egui::Rect::from_min_max(
         egui::pos2(full.left() + 8.0, top),
@@ -365,18 +399,18 @@ fn layout_slots(full: egui::Rect) -> Vec<Slot> {
     let quarter = row3.width() * 0.25;
     let mut slots = vec![
         Slot {
-            body: Body::Mercury,
+            body: viewpoint.shown(Body::Mercury),
             rect: egui::Rect::from_min_size(row1.min, egui::vec2(half, row1.height())),
         },
         Slot {
-            body: Body::Mars,
+            body: viewpoint.shown(Body::Mars),
             rect: egui::Rect::from_min_size(
                 egui::pos2(row1.left() + half, row1.top()),
                 egui::vec2(half, row1.height()),
             ),
         },
         Slot {
-            body: Body::Venus,
+            body: viewpoint.shown(Body::Venus),
             rect: row2,
         },
     ];
@@ -385,7 +419,7 @@ fn layout_slots(full: egui::Rect) -> Vec<Slot> {
         .enumerate()
     {
         slots.push(Slot {
-            body,
+            body: viewpoint.shown(body),
             rect: egui::Rect::from_min_size(
                 egui::pos2(row3.left() + index as f32 * quarter, row3.top()),
                 egui::vec2(quarter, row3.height()),
@@ -420,11 +454,12 @@ fn paint_header(painter: &egui::Painter, full: egui::Rect, observation: &Observa
         egui::FontId::proportional(16.0),
         LABEL,
     );
-    let subtitle = if observation.north_down {
-        "Telles que vues dans un télescope, le Nord vers le bas."
+    let north = if observation.north_down {
+        "le Nord vers le bas"
     } else {
-        "Telles que vues avec le Nord vers le haut."
+        "le Nord vers le haut"
     };
+    let subtitle = format!("Vues depuis {}, {}.", observation.viewpoint.depuis(), north);
     painter.text(
         egui::pos2(full.left() + 16.0, full.top() + 64.0),
         egui::Align2::LEFT_TOP,
@@ -515,12 +550,12 @@ fn paint_labels(painter: &egui::Painter, slot: &Slot, app: &Appearance) {
 
 fn tooltip(app: &Appearance) -> String {
     format!(
-        "Distance : {} UA\nDiamètre : {}\"\nÉclairée : {} %\nPhase : {}°\nLatitude sub-terrestre : {}°\nAxe du pôle : {}°\nLimbe éclairé : {}°",
+        "Distance : {} UA\nDiamètre : {}\"\nÉclairée : {} %\nPhase : {}°\nLatitude sous l'observateur : {}°\nAxe du pôle : {}°\nLimbe éclairé : {}°",
         fr_num(app.distance_au, 3),
         fr_num(app.eq_diameter_arcsec, 1),
         (app.illuminated * 100.0).round() as i32,
         fr_num(app.phase_angle_rad.to_degrees(), 1),
-        fr_num(app.sub_earth_lat_rad.to_degrees(), 1),
+        fr_num(app.sub_observer_lat_rad.to_degrees(), 1),
         fr_num(wrap_degrees(app.pole_pa_rad.to_degrees()), 1),
         fr_num(wrap_degrees(app.bright_limb_pa_rad.to_degrees()), 1),
     )

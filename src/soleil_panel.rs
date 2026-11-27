@@ -8,13 +8,11 @@ use image::{Rgba, RgbaImage};
 
 use crate::ephemeris::{self, SunApparent};
 use crate::panel::Panel;
-use crate::state::{self, Observation};
+use crate::state::{self, Observation, Viewpoint};
 use crate::sun_image::{self, Acquired};
 
 const HEADER_H: f32 = 118.0;
 const LABEL_H: f32 = 58.0;
-/// Diamètre angulaire qui remplit le cadre : 34′.
-const FRAME_ARCSEC: f64 = 34.0 * 60.0;
 const SKY_GREEN: egui::Color32 = egui::Color32::from_rgb(40, 220, 80);
 const LABEL: egui::Color32 = egui::Color32::from_rgb(235, 235, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(180, 190, 205);
@@ -69,9 +67,16 @@ impl Panel for SoleilPanel {
 
         let now = Local::now();
         let jd = ephemeris::julian_day_utc(now.with_timezone(&Utc));
-        let sun = ephemeris::sun_apparent(jd);
+        let sun = ephemeris::sun_apparent_from(jd, observation.viewpoint);
         let painter = ui.painter().clone();
-        paint_header(&painter, full, now, observation.north_down, &self.status);
+        paint_header(
+            &painter,
+            full,
+            now,
+            observation.north_down,
+            observation.viewpoint,
+            &self.status,
+        );
 
         let cb = egui::Rect::from_min_size(
             egui::pos2(full.left() + 16.0, full.top() + 86.0),
@@ -81,11 +86,17 @@ impl Panel for SoleilPanel {
             cb,
             egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
+        viewpoint_picker(ui, observation, full.left() + 268.0, full.top() + 84.0);
 
         let room = image_room(full);
         self.sync_texture(ui.ctx(), observation.north_down);
         if let Some(texture) = self.texture.as_ref() {
-            let side = sun_diameter_points(room.width().min(room.height()), sun.eq_diameter_arcsec);
+            let mercury = ephemeris::sun_apparent_from(jd, Viewpoint::Mercury);
+            let side = sun_diameter_points(
+                room.width().min(room.height()),
+                sun.eq_diameter_arcsec,
+                mercury.eq_diameter_arcsec,
+            );
             let display = egui::vec2(side, side);
             let image_rect = egui::Rect::from_center_size(room.center(), display);
             let response = ui.put(
@@ -149,8 +160,9 @@ impl SoleilPanel {
     }
 }
 
-fn sun_diameter_points(room_side_points: f32, diameter_arcsec: f64) -> f32 {
-    let span = (diameter_arcsec / FRAME_ARCSEC).clamp(0.05, 1.0);
+/// Le Soleil vu de Mercure remplit le cadre. Les autres disques suivent le même rapport.
+fn sun_diameter_points(room_side_points: f32, diameter_arcsec: f64, mercury_arcsec: f64) -> f32 {
+    let span = (diameter_arcsec / mercury_arcsec.max(1.0)).clamp(0.0, 1.0);
     room_side_points * span as f32
 }
 
@@ -161,11 +173,29 @@ fn image_room(full: egui::Rect) -> egui::Rect {
     )
 }
 
+fn viewpoint_picker(ui: &mut egui::Ui, observation: &mut Observation, x: f32, y: f32) {
+    let rect = egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(320.0, 26.0));
+    ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Vu depuis");
+            egui::ComboBox::from_id_salt("sun-viewpoint")
+                .selected_text(observation.viewpoint.label())
+                .width(150.0)
+                .show_ui(ui, |ui| {
+                    for choice in Viewpoint::ALL {
+                        ui.selectable_value(&mut observation.viewpoint, choice, choice.label());
+                    }
+                });
+        });
+    });
+}
+
 fn paint_header(
     painter: &egui::Painter,
     full: egui::Rect,
     now: chrono::DateTime<Local>,
     north_down: bool,
+    viewpoint: Viewpoint,
     status: &Status,
 ) {
     painter.text(
@@ -178,7 +208,11 @@ fn paint_header(
     painter.text(
         egui::pos2(full.left() + 16.0, full.top() + 42.0),
         egui::Align2::LEFT_TOP,
-        format!("{}  ·  heure de l'ordinateur", state::format_local(now)),
+        format!(
+            "{}  ·  heure de l'ordinateur  ·  vu depuis {}",
+            state::format_local(now),
+            viewpoint.depuis()
+        ),
         egui::FontId::proportional(16.0),
         LABEL,
     );
@@ -326,11 +360,22 @@ mod tests {
     #[test]
     fn diameter_follows_angular_size() {
         let room = 800.0;
-        let near = sun_diameter_points(room, 1_952.0);
-        let far = sun_diameter_points(room, 1_888.0);
+        let mercury = 6_000.0;
+        let near = sun_diameter_points(room, 1_952.0, mercury);
+        let far = sun_diameter_points(room, 1_888.0, mercury);
         assert!(near > far);
         let ratio = f64::from(near) / f64::from(far);
         assert!((ratio - 1_952.0 / 1_888.0).abs() < 1e-4);
         assert!(near < room && far < room);
+    }
+
+    #[test]
+    fn mercury_fills_the_frame_and_sets_the_scale() {
+        let room = 800.0;
+        let mercury = 5_000.0;
+        let full = sun_diameter_points(room, mercury, mercury);
+        assert!((f64::from(full) - f64::from(room)).abs() < 0.1);
+        let half = sun_diameter_points(room, mercury * 0.5, mercury);
+        assert!((f64::from(half) - f64::from(room) * 0.5).abs() < 0.1);
     }
 }

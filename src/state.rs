@@ -2,6 +2,77 @@
 
 use chrono::{DateTime, Datelike, Local, LocalResult, NaiveDate, TimeZone, Timelike, Utc};
 
+use crate::bodies::Body;
+
+/// Planète depuis laquelle on regarde. `Earth` est le réglage de départ.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Viewpoint {
+    Earth,
+    Mercury,
+    Venus,
+    Mars,
+    Jupiter,
+    Saturn,
+    Uranus,
+    Neptune,
+}
+
+impl Viewpoint {
+    pub const ALL: [Viewpoint; 8] = [
+        Viewpoint::Earth,
+        Viewpoint::Mercury,
+        Viewpoint::Venus,
+        Viewpoint::Mars,
+        Viewpoint::Jupiter,
+        Viewpoint::Saturn,
+        Viewpoint::Uranus,
+        Viewpoint::Neptune,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Viewpoint::Earth => "Terre",
+            Viewpoint::Mercury => "Mercure",
+            Viewpoint::Venus => "Vénus",
+            Viewpoint::Mars => "Mars",
+            Viewpoint::Jupiter => "Jupiter",
+            Viewpoint::Saturn => "Saturne",
+            Viewpoint::Uranus => "Uranus",
+            Viewpoint::Neptune => "Neptune",
+        }
+    }
+
+    /// Complément de « depuis … » : « la Terre », « Mars ».
+    pub fn depuis(self) -> &'static str {
+        match self {
+            Viewpoint::Earth => "la Terre",
+            other => other.label(),
+        }
+    }
+
+    pub fn as_body(self) -> Body {
+        match self {
+            Viewpoint::Earth => Body::Earth,
+            Viewpoint::Mercury => Body::Mercury,
+            Viewpoint::Venus => Body::Venus,
+            Viewpoint::Mars => Body::Mars,
+            Viewpoint::Jupiter => Body::Jupiter,
+            Viewpoint::Saturn => Body::Saturn,
+            Viewpoint::Uranus => Body::Uranus,
+            Viewpoint::Neptune => Body::Neptune,
+        }
+    }
+
+    /// Case de la grille : la planète d'où l'on regarde est remplacée par la Terre.
+    pub fn shown(self, place: Body) -> Body {
+        if self.as_body() == place {
+            Body::Earth
+        } else {
+            place
+        }
+    }
+}
+
 pub const MONTHS: [&str; 12] = [
     "janvier",
     "février",
@@ -65,6 +136,8 @@ pub struct Observation {
     pub next_step: Option<std::time::Instant>,
     /// La vue visible attend encore le disque de l'instant courant.
     pub waiting_for_image: bool,
+    /// Origine des vues Planètes et Soleil. La Lune reste géocentrique.
+    pub viewpoint: Viewpoint,
 }
 
 impl Observation {
@@ -77,6 +150,7 @@ impl Observation {
             step_unit: StepUnit::Days,
             next_step: None,
             waiting_for_image: false,
+            viewpoint: Viewpoint::Earth,
         }
     }
 }
@@ -145,4 +219,18 @@ pub fn format_local(when: DateTime<Local>) -> String {
 
 pub fn format_utc(when: DateTime<Local>) -> String {
     format_civil(when.with_timezone(&Utc))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_observed_planet_is_replaced_by_earth() {
+        assert_eq!(Viewpoint::Mars.shown(Body::Mars), Body::Earth);
+        assert_eq!(Viewpoint::Mars.shown(Body::Venus), Body::Venus);
+        assert_eq!(Viewpoint::Earth.shown(Body::Mars), Body::Mars);
+        assert_eq!(Viewpoint::Venus.shown(Body::Venus), Body::Earth);
+        assert_eq!(Viewpoint::Neptune.shown(Body::Jupiter), Body::Jupiter);
+    }
 }
