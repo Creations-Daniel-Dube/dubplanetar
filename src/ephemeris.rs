@@ -351,10 +351,6 @@ pub struct SunApparent {
     pub eq_diameter_arcsec: f64,
 }
 
-pub fn sun_apparent(jd: f64) -> SunApparent {
-    sun_apparent_from(jd, Viewpoint::Earth)
-}
-
 pub fn sun_apparent_from(jd: f64, viewpoint: Viewpoint) -> SunApparent {
     let distance_au = heliocentric(viewpoint.as_body(), jd).length().max(1e-12);
     let eq_diameter_arcsec = 2.0 * SOLAR_RADIUS_KM / (distance_au * AU_KM) * ARCSEC_PER_RAD;
@@ -763,8 +759,8 @@ mod tests {
 
     #[test]
     fn sun_is_larger_in_january_than_in_july() {
-        let january = sun_apparent(jd(2026, 1, 4));
-        let july = sun_apparent(jd(2026, 7, 6));
+        let january = sun_apparent_from(jd(2026, 1, 4), Viewpoint::Earth);
+        let july = sun_apparent_from(jd(2026, 7, 6), Viewpoint::Earth);
         assert!(
             january.eq_diameter_arcsec > july.eq_diameter_arcsec,
             "janvier {:.1}\" devrait dépasser juillet {:.1}\"",
@@ -840,7 +836,7 @@ mod tests {
             sun.distance_au,
             dist
         );
-        let earth = sun_apparent(when);
+        let earth = sun_apparent_from(when, Viewpoint::Earth);
         assert!(sun.distance_au > earth.distance_au);
         assert!(sun.eq_diameter_arcsec < earth.eq_diameter_arcsec);
     }
