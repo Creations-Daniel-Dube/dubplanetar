@@ -10,7 +10,6 @@ const AXIS_RGBA: [u8; 4] = [70, 150, 255, 255];
 const BUMP_STRENGTH: f64 = 0.02;
 /// Au-delà, la pente est rabotée pour ne pas retourner la normale.
 const BUMP_MAX_GRAD: f64 = 48.0;
-const RIM: [u8; 3] = [168, 196, 230];
 const RING_RGB: [u8; 3] = [230, 206, 150];
 
 pub struct DiskInput<'a> {
@@ -60,7 +59,6 @@ pub fn render_disk(input: &DiskInput<'_>, mut eq_radius_px: f64, max_side: i32) 
         }
     }
 
-    stroke_limb(&mut img);
     if input.draw_axis {
         draw_axis(
             &mut img,
@@ -300,44 +298,6 @@ fn mix_rgb(a: [u8; 3], b: [u8; 3], t: f64) -> [u8; 3] {
 
 fn mix_u8(a: u8, b: u8, t: f64) -> u8 {
     (f64::from(a) * (1.0 - t) + f64::from(b) * t).round() as u8
-}
-
-fn stroke_limb(img: &mut RgbaImage) {
-    let (w, h) = img.dimensions();
-    let mut edge = Vec::new();
-    for y in 0..h {
-        for x in 0..w {
-            let p = *img.get_pixel(x, y);
-            if p[3] == 0 {
-                continue;
-            }
-            let border = [(1_i32, 0), (-1, 0), (0, 1), (0, -1)]
-                .into_iter()
-                .any(|(dx, dy)| {
-                    let nx = i64::from(x) + i64::from(dx);
-                    let ny = i64::from(y) + i64::from(dy);
-                    if nx < 0 || ny < 0 || nx >= i64::from(w) || ny >= i64::from(h) {
-                        return true;
-                    }
-                    img.get_pixel(nx as u32, ny as u32)[3] == 0
-                });
-            if border {
-                edge.push((x, y, p));
-            }
-        }
-    }
-    for (x, y, p) in edge {
-        img.put_pixel(
-            x,
-            y,
-            Rgba([
-                mix_u8(p[0], RIM[0], 0.38),
-                mix_u8(p[1], RIM[1], 0.38),
-                mix_u8(p[2], RIM[2], 0.38),
-                255,
-            ]),
-        );
-    }
 }
 
 fn draw_axis(

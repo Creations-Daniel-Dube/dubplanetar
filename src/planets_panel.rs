@@ -69,7 +69,7 @@ struct RasterKey {
     radius_px: i32,
     stamp: Option<(u64, u64)>,
     viewpoint: Viewpoint,
-    /// Trait bleu du pôle, absent en vision réelle.
+    /// Trait bleu de l'axe du pôle.
     axis: bool,
 }
 
@@ -127,18 +127,23 @@ impl Panel for PlanetsPanel {
         paint_header(&painter, full, observation, scale);
         paint_rows(&painter, content);
 
-        let cb = egui::Rect::from_min_size(
-            egui::pos2(full.left() + 16.0, full.top() + 86.0),
-            egui::vec2(240.0, 22.0),
-        );
         ui.put(
-            cb,
+            egui::Rect::from_min_size(
+                egui::pos2(full.left() + 16.0, full.top() + 86.0),
+                egui::vec2(168.0, 22.0),
+            ),
             egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
-        viewpoint_picker(ui, observation, full.left() + 268.0, full.top() + 84.0);
+        ui.put(
+            egui::Rect::from_min_size(
+                egui::pos2(full.left() + 188.0, full.top() + 86.0),
+                egui::vec2(140.0, 22.0),
+            ),
+            egui::Checkbox::new(&mut observation.show_pole_axis, "Axe du pôle"),
+        );
+        viewpoint_picker(ui, observation, full.left() + 340.0, full.top() + 84.0);
 
         let real = observation.real_vision;
-        let lon = vision::longitude_deg(observation.when);
         let minute = (jd * 1440.0).round() as i64;
         let mut specs = Vec::new();
         for (slot, (body, app)) in slots.iter().zip(views.iter()) {
@@ -155,6 +160,7 @@ impl Panel for PlanetsPanel {
             observation.north_down,
             observation.viewpoint,
             real,
+            observation.show_pole_axis,
         );
         if busy {
             observation.waiting_for_image = true;
@@ -169,42 +175,6 @@ impl Panel for PlanetsPanel {
                 let (_, area_h) = image_room(slot.rect);
                 let center = egui::pos2(slot.rect.center().x, slot.rect.top() + 4.0 + area_h * 0.5);
                 let image_rect = egui::Rect::from_center_size(center, display);
-                if real {
-                    let gain = vision::gain_for(*body, app, jd);
-                    let glare = vision::glare_of(*body, gain, app.illuminated);
-                    let (_, area_h) = image_room(slot.rect);
-                    let zone = egui::Rect::from_min_max(
-                        slot.rect.min,
-                        egui::pos2(slot.rect.right(), slot.rect.top() + 4.0 + area_h),
-                    );
-                    let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
-                    let clip = painter.with_clip_rect(zone);
-                    if let Some(backdrop) =
-                        vision::sky_behind(*body, observation.viewpoint, app, jd, lon)
-                    {
-                        let reach = if glare == vision::Glare::Wash {
-                            (radius * 3.6).max(40.0)
-                        } else {
-                            (radius * 2.2).max(26.0)
-                        };
-                        vision::paint_soft_disc(
-                            &clip,
-                            ui.ctx(),
-                            image_rect.center(),
-                            reach,
-                            backdrop.color,
-                        );
-                    }
-                    vision::paint_glare(
-                        &clip,
-                        ui.ctx(),
-                        image_rect.center(),
-                        radius,
-                        gain,
-                        app.illuminated,
-                        glare,
-                    );
-                }
                 let response = ui.put(
                     image_rect,
                     egui::Image::from_texture(&cached.texture)
@@ -244,6 +214,7 @@ impl PlanetsPanel {
         north_down: bool,
         viewpoint: Viewpoint,
         real: bool,
+        show_axis: bool,
     ) -> bool {
         let ready = self.pump.poll();
         for done in ready {
@@ -259,16 +230,11 @@ impl PlanetsPanel {
             else {
                 continue;
             };
-            if key.axis != !real {
+            if key.axis != show_axis {
                 continue;
             }
             let grade = grade_of(real, body, specs, jd);
-            let illum = specs
-                .iter()
-                .find(|(candidate, _, _, _)| *candidate == body)
-                .map(|(_, app, _, _)| app.illuminated)
-                .unwrap_or(1.0);
-            self.install(ctx, body, key, north_down, grade, illum, done.image);
+            self.install(ctx, body, key, north_down, grade, done.image);
         }
 
         let mut missing = Vec::new();
@@ -279,7 +245,7 @@ impl PlanetsPanel {
                 radius_px: *radius_px,
                 stamp,
                 viewpoint,
-                axis: !real,
+                axis: show_axis,
             };
             let grade = if real {
                 Some(vision::gain_for(*body, app, jd))
@@ -295,7 +261,7 @@ impl PlanetsPanel {
                             north_down,
                             grade,
                             vision::cast_of(*body),
-                            shown_glare(grade, *body, app.illuminated),
+                            vision::Glare::None,
                         );
                         cached.texture.set(color, egui::TextureOptions::LINEAR);
                         cached.north_down = north_down;
@@ -332,7 +298,7 @@ impl PlanetsPanel {
                     bump: None,
                     bump_path: None,
                     rings: body.ring_zones(),
-                    draw_axis: !real,
+                    draw_axis: show_axis,
                     radius_px: f64::from(*radius_px),
                     max_side: 1000,
                 });
@@ -366,7 +332,6 @@ impl PlanetsPanel {
         key: RasterKey,
         north_down: bool,
         grade: Option<f64>,
-        illuminated: f64,
         north_up: RgbaImage,
     ) {
         let color = vision::present_disk(
@@ -374,7 +339,7 @@ impl PlanetsPanel {
             north_down,
             grade,
             vision::cast_of(body),
-            shown_glare(grade, body, illuminated),
+            vision::Glare::None,
         );
         let grade_q = grade.map(vision::quantize_gain).unwrap_or(-1);
         if let Some(cached) = self.cache.get_mut(&body) {
@@ -400,13 +365,6 @@ impl PlanetsPanel {
                 },
             );
         }
-    }
-}
-
-fn shown_glare(grade: Option<f64>, body: Body, illuminated: f64) -> vision::Glare {
-    match grade {
-        Some(gain) => vision::glare_of(body, gain, illuminated),
-        None => vision::Glare::None,
     }
 }
 

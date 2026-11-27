@@ -221,6 +221,7 @@ pub fn present_disk(
     egui::ColorImage::from_rgba_unmultiplied(size, &pixels)
 }
 
+#[cfg(test)]
 pub fn tone_channel(channel: u8, gain: f64) -> u8 {
     let y = tone_luma(f64::from(channel) / 255.0, gain, 0.0);
     (y * 255.0).round().clamp(0.0, 255.0) as u8
@@ -374,7 +375,7 @@ pub fn paint_glare(
         Glare::Wash => {
             let outer = (radius * 5.6).max(56.0);
             let wide = (205.0 * lit).round().clamp(0.0, 255.0) as u8;
-            paint_soft_disc(
+            paint_wash_disc(
                 painter,
                 ctx,
                 center,
@@ -383,7 +384,7 @@ pub fn paint_glare(
             );
             let core = (radius * 2.35).max(30.0);
             let hot = (255.0 * lit).round().clamp(0.0, 255.0) as u8;
-            paint_soft_disc(
+            paint_wash_disc(
                 painter,
                 ctx,
                 center,
@@ -479,12 +480,55 @@ pub fn paint_soft_disc(
     );
 }
 
+/// Halo de Mercure et Vénus. Le bord du carré de texture est transparent, et le
+/// disque reste dans le cadre : un halo plus grand que la case est ramené à elle
+/// au lieu d'y être coupé en rectangle.
+pub fn paint_wash_disc(
+    painter: &egui::Painter,
+    ctx: &egui::Context,
+    center: egui::Pos2,
+    radius: f32,
+    tint: egui::Color32,
+) {
+    if radius < 1.0 || tint.a() == 0 {
+        return;
+    }
+    let room = room_for_disc(painter, center);
+    let (radius, fills_room) = if radius <= room {
+        (radius, false)
+    } else {
+        (room, true)
+    };
+    if radius < 1.0 {
+        return;
+    }
+    let tex = wash_glow_texture(ctx, fills_room);
+    let side = radius * 2.0;
+    painter.image(
+        tex.id(),
+        egui::Rect::from_center_size(center, egui::vec2(side, side)),
+        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+        tint,
+    );
+}
+
+/// Plus petite distance du centre au bord du clip, moins un pixel.
+fn room_for_disc(painter: &egui::Painter, center: egui::Pos2) -> f32 {
+    let clip = painter.clip_rect();
+    let room = (center.x - clip.left())
+        .min(clip.right() - center.x)
+        .min(center.y - clip.top())
+        .min(clip.bottom() - center.y);
+    room - 1.0
+}
+
 /// Frange claire dans la marge transparente. `Wash` voile aussi la face éclairée.
 fn limb_bloom(pixels: &mut [u8], width: usize, height: usize, glare: Glare) {
     let (frac, outside, onto) = match glare {
         Glare::None => return,
         Glare::Soft => (0.030_f32, 0.95_f32, 0.0_f32),
-        Glare::Wash => (0.078_f32, 1.10_f32, 0.40_f32),
+        // Assez court pour s'éteindre dans la marge du carré (1,22 rayon).
+        Glare::Wash => (0.036_f32, 1.10_f32, 0.40_f32),
     };
     if width < 4 || height < 4 {
         return;
@@ -526,7 +570,16 @@ fn limb_bloom(pixels: &mut [u8], width: usize, height: usize, glare: Glare) {
             let i = (y * width + x) * 4;
             if pixels[i + 3] == 0 {
                 let dither = f32::from(BAYER[(y & 7) * 8 + (x & 7)]) / 64.0 - 0.5;
-                let alpha = (b * outside * 255.0 + dither).round().clamp(0.0, 255.0) as u8;
+                let mask = if glare == Glare::Wash {
+                    let u = ((x as f32 + 0.5) / width as f32 * 2.0 - 1.0)
+                        .hypot((y as f32 + 0.5) / height as f32 * 2.0 - 1.0);
+                    1.0 - smoothstep_f(0.90, 1.0, u)
+                } else {
+                    1.0
+                };
+                let alpha = (b * outside * mask * 255.0 + dither)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
                 if alpha == 0 {
                     continue;
                 }
@@ -609,6 +662,33 @@ fn glow_texture(ctx: &egui::Context) -> egui::TextureHandle {
     tex
 }
 
+/// `fills_room` : le halo a été ramené à la case. Il reste clair près du limbe,
+/// puis s'éteint avant le bord. Sinon, même gaussienne que les autres disques,
+/// avec un fondu à la place du carré.
+fn wash_glow_texture(ctx: &egui::Context, fills_room: bool) -> egui::TextureHandle {
+    let name = if fills_room {
+        "vision-wash-room"
+    } else {
+        "vision-wash-glow"
+    };
+    let id = egui::Id::unique(name);
+    if let Some(tex) = ctx.data(|data| data.get_temp::<egui::TextureHandle>(id)) {
+        return tex;
+    }
+    let (fade_start, sigma_frac) = if fills_room {
+        (0.70_f32, 0.85_f32)
+    } else {
+        (0.88_f32, 0.46_f32)
+    };
+    let tex = ctx.load_texture(
+        name,
+        radial_glow(fade_start, sigma_frac),
+        egui::TextureOptions::LINEAR,
+    );
+    ctx.data_mut(|data| data.insert_temp(id, tex.clone()));
+    tex
+}
+
 fn gaussian_image() -> egui::ColorImage {
     const N: usize = 512;
     let mut raw = vec![0_u8; N * N * 4];
@@ -630,6 +710,41 @@ fn gaussian_image() -> egui::ColorImage {
         }
     }
     egui::ColorImage::from_rgba_unmultiplied([N, N], &raw)
+}
+
+/// Gaussienne radiale, nulle sur le bord du carré et dans les coins.
+fn radial_glow(fade_start: f32, sigma_frac: f32) -> egui::ColorImage {
+    const N: usize = 512;
+    let mut raw = vec![0_u8; N * N * 4];
+    let half = (N as f32 - 1.0) * 0.5;
+    let sigma = half * sigma_frac;
+    let inv = 1.0 / (2.0 * sigma * sigma);
+    for y in 0..N {
+        for x in 0..N {
+            let dx = x as f32 - half;
+            let dy = y as f32 - half;
+            let u = (dx * dx + dy * dy).sqrt() / half;
+            let fade = 1.0 - smoothstep_f(fade_start, 1.0, u);
+            let g = (-(dx * dx + dy * dy) * inv).exp();
+            let a = if fade <= 0.0 {
+                0
+            } else {
+                let dither = f32::from(BAYER[(y & 7) * 8 + (x & 7)]) / 64.0 - 0.5;
+                (g * fade * 255.0 + dither).round().clamp(0.0, 255.0) as u8
+            };
+            let i = (y * N + x) * 4;
+            raw[i] = 255;
+            raw[i + 1] = 255;
+            raw[i + 2] = 255;
+            raw[i + 3] = a;
+        }
+    }
+    egui::ColorImage::from_rgba_unmultiplied([N, N], &raw)
+}
+
+fn smoothstep_f(edge0: f32, edge1: f32, x: f32) -> f32 {
+    let t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 /// Trame 8×8, 0…63, pour casser les paliers quand la texture est étirée.
@@ -897,6 +1012,50 @@ mod tests {
         assert!(outside.a() > 15, "frange alpha {}", outside.a());
         let night = at(14, 24);
         assert!(luma(night) < 50.0, "nuit {}", luma(night));
+    }
+
+    #[test]
+    fn wash_glow_is_clear_on_the_square_border() {
+        for (fade, sigma) in [(0.88_f32, 0.46_f32), (0.70, 0.85)] {
+            let image = radial_glow(fade, sigma);
+            let n = image.size[0];
+            let at = |x: usize, y: usize| image.pixels[y * n + x].a();
+            assert_eq!(at(0, n / 2), 0, "milieu de bord fade {fade}");
+            assert_eq!(at(n - 1, n / 2), 0, "bord opposé fade {fade}");
+            assert_eq!(at(0, 0), 0, "coin fade {fade}");
+            assert_eq!(at(n - 1, n - 1), 0, "coin opposé fade {fade}");
+            assert!(at(n / 2, n / 2) > 250, "centre fade {fade}");
+        }
+    }
+
+    #[test]
+    fn wash_bloom_clears_the_canvas_and_stays_round() {
+        let side = 122u32;
+        let mut image = RgbaImage::new(side, side);
+        let center = f64::from(side) / 2.0;
+        let radius = center / 1.22;
+        for y in 0..side {
+            for x in 0..side {
+                let dx = f64::from(x) - center;
+                let dy = f64::from(y) - center;
+                if dx * dx + dy * dy <= radius * radius {
+                    image.put_pixel(x, y, image::Rgba([230, 220, 200, 255]));
+                }
+            }
+        }
+        let out = present_disk(&image, false, Some(40.0), Cast::Neutral, Glare::Wash);
+        let at = |x: i32, y: i32| out.pixels[(y as usize) * side as usize + x as usize];
+        let mid = side as i32 / 2;
+        assert_eq!(at(0, mid).a(), 0, "bord du carré");
+        assert_eq!(at(mid, 0).a(), 0, "bord haut");
+        assert_eq!(at(0, 0).a(), 0, "coin");
+        let axis = at(mid + radius as i32 + 4, mid);
+        let step = ((radius + 4.0) / std::f64::consts::SQRT_2) as i32;
+        let diag = at(mid + step, mid + step);
+        assert!(axis.a() > 15, "frange axe {}", axis.a());
+        assert!(diag.a() > 15, "frange diagonale {}", diag.a());
+        let gap = (i32::from(axis.a()) - i32::from(diag.a())).abs();
+        assert!(gap < 50, "carré {} contre {}", axis.a(), diag.a());
     }
 
     #[test]

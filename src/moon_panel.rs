@@ -73,7 +73,7 @@ struct RasterKey {
     radius_px: i32,
     stamp: Option<(u64, u64)>,
     bump: Option<(u64, u64)>,
-    /// Trait bleu du pôle, absent en vision réelle.
+    /// Trait bleu de l'axe du pôle.
     axis: bool,
 }
 
@@ -103,13 +103,19 @@ impl Panel for MoonPanel {
         let hover = ui.interact(room, ui.scope_id().with("moon-zoom"), egui::Sense::hover());
         magnify(ui, hover.hovered(), &mut self.zoom, ZOOM_MAX);
 
-        let cb = egui::Rect::from_min_size(
-            egui::pos2(full.left() + 16.0, full.top() + 86.0),
-            egui::vec2(240.0, 22.0),
+        ui.put(
+            egui::Rect::from_min_size(
+                egui::pos2(full.left() + 16.0, full.top() + 86.0),
+                egui::vec2(168.0, 22.0),
+            ),
+            egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
         );
         ui.put(
-            cb,
-            egui::Checkbox::new(&mut observation.north_down, "Nord vers le bas"),
+            egui::Rect::from_min_size(
+                egui::pos2(full.left() + 188.0, full.top() + 86.0),
+                egui::vec2(140.0, 22.0),
+            ),
+            egui::Checkbox::new(&mut observation.show_pole_axis, "Axe du pôle"),
         );
         place_reset_button(ui, reset_zoom_rect(ui, full), &mut self.zoom);
 
@@ -140,8 +146,8 @@ impl Panel for MoonPanel {
             minute,
             radius_px,
             observation.north_down,
-            real,
             grade,
+            observation.show_pole_axis,
         );
         if busy {
             observation.waiting_for_image = true;
@@ -203,14 +209,14 @@ impl MoonPanel {
         minute: i64,
         radius_px: i32,
         north_down: bool,
-        real: bool,
         grade: Option<f64>,
+        show_axis: bool,
     ) -> bool {
         for done in self.pump.poll() {
             let Some((token, key)) = self.requested.clone() else {
                 continue;
             };
-            if done.token == token && key.axis == !real {
+            if done.token == token && key.axis == show_axis {
                 self.map = done.loaded_texture.clone();
                 self.map_stamp = key.stamp;
                 self.map_loaded = true;
@@ -229,7 +235,7 @@ impl MoonPanel {
             radius_px,
             stamp,
             bump: bump_stamp,
-            axis: !real,
+            axis: show_axis,
         };
         if let Some(cached) = &mut self.raster {
             if cached.key == key {
@@ -284,7 +290,7 @@ impl MoonPanel {
                 bump,
                 bump_path,
                 rings: &[],
-                draw_axis: !real,
+                draw_axis: show_axis,
                 radius_px: f64::from(radius_px),
                 max_side: MAX_SIDE,
             });

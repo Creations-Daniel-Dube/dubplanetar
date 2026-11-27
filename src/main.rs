@@ -93,7 +93,13 @@ impl eframe::App for DubPlanetar {
         self.current = current;
 
         self.observation.waiting_for_image = false;
-        let sky = Color32::from_rgb(0, 0, 52);
+        let sky = if self.panels[self.current].id() == "planets-scale"
+            && self.observation.real_vision
+        {
+            Color32::BLACK
+        } else {
+            Color32::from_rgb(0, 0, 52)
+        };
         egui::CentralPanel::default()
             .frame(egui::Frame::central_panel(ui.style()).fill(sky))
             .show(ui, |ui| {

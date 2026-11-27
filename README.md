@@ -1,6 +1,6 @@
 # dubPlanetar — Planètes à l'échelle
 
-**Version 0.5.3400 BETA**
+**Version 0.5.3850 BETA**
 
 Application de bureau pour visualiser les planètes, la Lune et le Soleil telles qu'elles apparaîtraient dans un télescope, avec les vraies tailles angulaires. Les planètes et la Lune montrent aussi leur phase, à l'instant choisi. Le Soleil suit l'heure de l'ordinateur.
 

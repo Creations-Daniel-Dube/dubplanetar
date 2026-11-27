@@ -140,6 +140,8 @@ pub struct Observation {
     pub viewpoint: Viewpoint,
     /// Luminosité d'oculaire et ciel derrière l'objet. Décoché : rendu détaillé actuel.
     pub real_vision: bool,
+    /// Trait bleu de l'axe du pôle. Décoché : aucun trait.
+    pub show_pole_axis: bool,
 }
 
 impl Observation {
@@ -154,6 +156,7 @@ impl Observation {
             waiting_for_image: false,
             viewpoint: Viewpoint::Earth,
             real_vision: false,
+            show_pole_axis: false,
         }
     }
 }

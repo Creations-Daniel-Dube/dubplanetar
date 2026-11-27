@@ -94,6 +94,11 @@ impl SatelliteWindow {
         let jd = ephemeris::julian_day_utc(observation.when.with_timezone(&chrono::Utc));
         let app = ephemeris::appearance(planet, jd);
         let system = satellites::system(planet, jd);
+        let style = ctx.global_style();
+        let mut frame = egui::Frame::window(&style);
+        if observation.real_vision {
+            frame = frame.fill(egui::Color32::BLACK);
+        }
         egui::Window::new(title)
             .id(egui::Id::unique("satellite-window"))
             .open(&mut open)
@@ -101,6 +106,7 @@ impl SatelliteWindow {
             .min_size([480.0, 420.0])
             .resizable(true)
             .collapsible(false)
+            .frame(frame)
             .show(ctx, |ui| {
                 self.contents(ui, observation, planet, jd, &app, system.as_ref());
             });
@@ -123,7 +129,10 @@ impl SatelliteWindow {
         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.close_request = true;
         }
-        ui.checkbox(&mut observation.real_vision, "Vision réelle des objets");
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut observation.real_vision, "Vision réelle des objets");
+            ui.checkbox(&mut observation.show_pole_axis, "Axe du pôle");
+        });
         ui.add_space(4.0);
         ui.label(
             egui::RichText::new(format!(
@@ -172,6 +181,7 @@ impl SatelliteWindow {
         let ppp = f64::from(ui.ctx().pixels_per_point());
         let radius_px = quantize_radius(app.eq_diameter_arcsec * 0.5 * scale * ppp);
         let real = observation.real_vision;
+        let show_axis = observation.show_pole_axis;
         let gain = if real {
             vision::gain_for(planet, app, jd)
         } else {
@@ -187,6 +197,7 @@ impl SatelliteWindow {
             gain,
             real,
             observation.north_down,
+            show_axis,
         );
         if busy {
             ui.ctx()
@@ -194,32 +205,10 @@ impl SatelliteWindow {
         }
         let painter = ui.painter().clone();
         let center = sky.center();
-        let mut label_color = LABEL;
         if real {
-            if let Some(backdrop) = vision::sky_behind(
-                planet,
-                Viewpoint::Earth,
-                app,
-                jd,
-                vision::longitude_deg(observation.when),
-            ) {
-                painter.rect_filled(sky, 0.0, backdrop.color);
-                if backdrop.bright {
-                    label_color = egui::Color32::from_rgb(16, 22, 40);
-                }
-            }
-            let radius = (app.eq_diameter_arcsec * 0.5 * scale) as f32;
-            let clip = painter.with_clip_rect(sky);
-            vision::paint_glare(
-                &clip,
-                ui.ctx(),
-                center,
-                radius,
-                gain,
-                app.illuminated,
-                vision::glare_of(planet, gain, app.illuminated),
-            );
+            painter.rect_filled(sky, 0.0, egui::Color32::BLACK);
         }
+        let label_color = LABEL;
         if let Some(cached) = &self.cache {
             let [w, h] = cached.texture.size();
             let display = egui::vec2(w as f32 / ppp as f32, h as f32 / ppp as f32);
@@ -265,6 +254,7 @@ impl SatelliteWindow {
         gain: f64,
         real: bool,
         north_down: bool,
+        show_axis: bool,
     ) -> bool {
         let gain_q = if real {
             vision::quantize_gain(gain)
@@ -274,7 +264,7 @@ impl SatelliteWindow {
         for done in self.pump.poll() {
             if self.token == done.token {
                 if let Some(key) = self.pending.clone() {
-                    if key.axis == !real {
+                    if key.axis == show_axis {
                         self.install(
                             ctx,
                             key,
@@ -296,7 +286,7 @@ impl SatelliteWindow {
             minute,
             radius_px,
             stamp,
-            axis: !real,
+            axis: show_axis,
         };
         if let Some(cached) = &mut self.cache {
             if cached.key == key {
@@ -334,7 +324,7 @@ impl SatelliteWindow {
                 bump: None,
                 bump_path: None,
                 rings: planet.ring_zones(),
-                draw_axis: !real,
+                draw_axis: show_axis,
                 radius_px: f64::from(radius_px),
                 max_side: 1000,
             });
