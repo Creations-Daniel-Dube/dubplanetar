@@ -10,6 +10,8 @@ use crate::bodies::Body;
 
 const AU_KM: f64 = 149_597_870.7;
 const ARCSEC_PER_RAD: f64 = 206_264.806_247_096_36;
+/// Rayon nominal du Soleil, UAI 2015.
+const SOLAR_RADIUS_KM: f64 = 695_700.0;
 /// Jours-lumière pour une unité astronomique.
 const LIGHT_DAYS_PER_AU: f64 = 499.004_783_836 / 86_400.0;
 /// Obliquité moyenne J2000, pour passer de l'écliptique VSOP87 à l'équatorial.
@@ -309,6 +311,25 @@ fn equatorial_planet(body: Body, jd: f64) -> Vec3 {
 fn equatorial_earth(jd: f64) -> Vec3 {
     let c = vsop87::vsop87a::earth(jd);
     ecliptic_to_equatorial(Vec3::new(c.x, c.y, c.z))
+}
+
+/// Distance Terre–Soleil et diamètre apparent à l'instant `jd`.
+///
+/// Le Soleil est à l'origine de VSOP87 : la distance est la longueur du vecteur
+/// terrestre, en unités astronomiques. Pas de phase : le disque est toujours plein.
+#[derive(Clone, Copy, Debug)]
+pub struct SunApparent {
+    pub distance_au: f64,
+    pub eq_diameter_arcsec: f64,
+}
+
+pub fn sun_apparent(jd: f64) -> SunApparent {
+    let distance_au = equatorial_earth(jd).length().max(1e-12);
+    let eq_diameter_arcsec = 2.0 * SOLAR_RADIUS_KM / (distance_au * AU_KM) * ARCSEC_PER_RAD;
+    SunApparent {
+        distance_au,
+        eq_diameter_arcsec,
+    }
 }
 
 fn ecliptic_to_equatorial(v: Vec3) -> Vec3 {
@@ -706,6 +727,34 @@ mod tests {
             "diamètre {:.1}\"",
             moon.eq_diameter_arcsec
         );
+    }
+
+    #[test]
+    fn sun_is_larger_in_january_than_in_july() {
+        let january = sun_apparent(jd(2026, 1, 4));
+        let july = sun_apparent(jd(2026, 7, 6));
+        assert!(
+            january.eq_diameter_arcsec > july.eq_diameter_arcsec,
+            "janvier {:.1}\" devrait dépasser juillet {:.1}\"",
+            january.eq_diameter_arcsec,
+            july.eq_diameter_arcsec
+        );
+        let ratio = january.eq_diameter_arcsec / july.eq_diameter_arcsec;
+        assert!(
+            (1.025..1.05).contains(&ratio),
+            "rapport janvier/juillet {ratio:.4}, attendu autour de 1,034"
+        );
+        assert!(
+            (0.97..0.99).contains(&january.distance_au),
+            "périhélie {:.4} UA",
+            january.distance_au
+        );
+        assert!(
+            (1.01..1.03).contains(&july.distance_au),
+            "aphélie {:.4} UA",
+            july.distance_au
+        );
+        assert!(january.eq_diameter_arcsec > 1_900.0 && july.eq_diameter_arcsec > 1_860.0);
     }
 
     #[test]

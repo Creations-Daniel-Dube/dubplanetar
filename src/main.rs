@@ -8,13 +8,16 @@ mod moon_panel;
 mod panel;
 mod planets_panel;
 mod raster_pump;
+mod soleil_panel;
 mod state;
+mod sun_image;
 mod time_panel;
 
 use egui::Color32;
 use moon_panel::MoonPanel;
 use panel::Panel;
 use planets_panel::PlanetsPanel;
+use soleil_panel::SoleilPanel;
 use state::Observation;
 use std::sync::Arc;
 use time_panel::DatePanel;
@@ -60,6 +63,7 @@ impl DubPlanetar {
                 Box::new(DatePanel),
                 Box::new(PlanetsPanel::default()),
                 Box::new(MoonPanel::default()),
+                Box::new(SoleilPanel::default()),
             ],
             current: 1,
         }

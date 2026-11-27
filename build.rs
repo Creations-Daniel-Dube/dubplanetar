@@ -15,7 +15,11 @@ fn main() {
     std::fs::write(&rc, format!("1 ICON \"{ico}\"\n")).expect("écriture du fichier de ressources");
 
     let obj = out.join("resource.o");
-    let windres = if cfg!(windows) { "windres.exe" } else { "windres" };
+    let windres = if cfg!(windows) {
+        "windres.exe"
+    } else {
+        "windres"
+    };
     let status = std::process::Command::new(windres)
         .arg(&rc)
         .arg(&obj)

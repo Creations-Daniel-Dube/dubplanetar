@@ -1,8 +1,8 @@
 # dubPlanetar — Planètes à l'échelle
 
-**Version 0.3.1070 BETA**
+**Version 0.4.2000 BETA**
 
-Application de bureau pour visualiser les planètes et la Lune telles qu'elles apparaîtraient dans un télescope, à un instant donné, avec les vraies tailles angulaires et les phases d'éclairage.
+Application de bureau pour visualiser les planètes, la Lune et le Soleil telles qu'elles apparaîtraient dans un télescope, avec les vraies tailles angulaires. Les planètes et la Lune montrent aussi leur phase, à l'instant choisi. Le Soleil suit l'heure de l'ordinateur.
 
 Le dépôt GitHub : [Creations-Daniel-Dube/dubplanetar](https://github.com/Creations-Daniel-Dube/dubplanetar)
 
@@ -16,17 +16,18 @@ Lancez le programme **Planètes à l'échelle**. Une fenêtre s'ouvre : menu à 
 
 ### Menu (colonne de gauche)
 
-Trois entrées mènent aux parties du logiciel :
+Quatre entrées mènent aux parties du logiciel :
 
 | Bouton | Rôle |
 |--------|------|
-| **Date et heure** | Choisir l'instant de l'observation (partagé par toutes les vues). |
+| **Date et heure** | Choisir l'instant de l'observation (planètes et Lune). |
 | **Planètes à l'échelle** | Mercure à Neptune sur une même échelle en secondes d'arc. |
 | **Lune** | La Lune seule, en grand sur tout l'écran. |
+| **Soleil** | Le Soleil maintenant, à l'heure de l'ordinateur. |
 
 ### Date et heure
 
-C'est l'**horloge commune** du logiciel. Tout ce que vous réglez ici s'applique en même temps aux planètes et à la Lune.
+C'est l'**horloge commune** des planètes et de la Lune. Tout ce que vous réglez ici s'applique en même temps à ces deux vues. L'onglet **Soleil** ne la suit pas : il reste à la date et à l'heure actuelles de l'ordinateur.
 
 - **Année** : de 1000 à 2500.
 - **Mois** : liste en français.
@@ -87,6 +88,18 @@ Même date et heure que les planètes, mais **un seul disque**, aussi grand que 
 
 **Survol** : distance en kilomètres, diamètre en minutes d'arc, % éclairé, phase, latitude sous-terrestre.
 
+### Soleil
+
+Cet onglet **ne suit pas** la date des autres vues. Il affiche toujours le Soleil pour **l'heure actuelle de l'ordinateur**. Il n'a pas de bandeau d'animation.
+
+À chaque lancement, le logiciel télécharge l'image **SDO/HMI continuum** (quick-look NASA) et n'en garde que le disque : la légende en bas de la photo est retirée. Le Soleil n'a pas de phase : le cercle est toujours entier. Sa taille à l'écran suit la **vraie distance Terre–Soleil** (un peu plus grand début janvier, au périhélie, qu'au début juillet, à l'aphélie, soit environ 3 %).
+
+**En-tête** : titre, heure de l'ordinateur, origine de l'image, case **Nord vers le bas** (rotation de 180°, les textes restent lisibles).
+
+**Sous le disque** : nom, diamètre en **minutes d'arc** (′), distance en unités astronomiques.
+
+Si le réseau manque, la dernière image enregistrée est réaffichée. Sans aucune image en réserve, un disque uni de secours prend la place, à la même échelle.
+
 ### Animation
 
 En bas des vues **Planètes à l'échelle** et **Lune**, le bandeau **Animation** fait défiler la date commune.
@@ -97,7 +110,7 @@ En bas des vues **Planètes à l'échelle** et **Lune**, le bandeau **Animation*
 - **Saut** : un nombre et une unité. Jours de 1 à 365, mois de 1 à 12, années de 1 à 10.
 - L'heure et la minute ne changent pas. Un 31 ramené dans un mois plus court tombe sur le dernier jour de ce mois.
 - La lecture s'arrête à l'an 1000 et à l'an 2500.
-- L'onglet **Date et heure** n'a pas de bandeau, mais il montre l'instant pendant la lecture. Changer d'onglet ne l'arrête pas.
+- Les onglets **Date et heure** et **Soleil** n'ont pas de bandeau. La date montre l'instant pendant la lecture. Le Soleil continue d'afficher l'heure de l'ordinateur. Changer d'onglet ne l'arrête pas.
 
 ### Images optionnelles
 
@@ -119,7 +132,8 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 
 - Un seul instant à la fois (pas de comparaison entre plusieurs dates).
 - Pas de satellites, comètes ni astéroïdes.
-- Les photos sont des cartes fixes : pas de météo, pas de taches en évolution sur Jupiter, etc.
+- Les photos des planètes et de la Lune sont des cartes fixes : pas de météo, pas de taches en évolution sur Jupiter, etc.
+- L'image du Soleil est le dernier continuum SDO/HMI disponible au lancement (souvent différé de quelques minutes), pas une reconstitution pour une date passée.
 - L'éclairage du relief lunaire accentue les pentes ; il ne calcule pas les ombres profondes dans les cratères.
 - Calculs pensés pour les usages amateurs (années 1000–2500) ; ce n'est pas un outil professionnel de mission spatiale.
 
@@ -128,8 +142,9 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 1. Réglez **Date et heure** (ou **Maintenant**).
 2. Ouvrez **Planètes à l'échelle** pour comparer les tailles et phases.
 3. Ouvrez **Lune** pour le détail lunaire.
-4. Cochez ou décochez **Nord vers le bas** selon votre habitude d'observation.
-5. Dans **Animation**, choisissez le saut, puis **Lecture**, **Reculer** ou **1 fois**.
+4. Ouvrez **Soleil** pour le disque du moment, à l'heure de l'ordinateur.
+5. Cochez ou décochez **Nord vers le bas** selon votre habitude d'observation.
+6. Dans **Animation**, choisissez le saut, puis **Lecture**, **Reculer** ou **1 fois**.
 
 ---
 
@@ -143,13 +158,14 @@ Open **Planètes à l'échelle** (*Planets at scale*). The window has a left-han
 
 | Button | Purpose |
 |--------|---------|
-| **Date et heure** | Set the observation time (shared by all views). |
+| **Date et heure** | Set the observation time (planets and Moon). |
 | **Planètes à l'échelle** | Mercury through Neptune on one arcsecond scale. |
 | **Lune** | The Moon alone, large on screen. |
+| **Soleil** | The Sun right now, on the computer's clock. |
 
 ### Date and time
 
-This is the **shared clock** for the app. Whatever you set here applies at once to the planets view and the Moon view.
+This is the **shared clock** for the planets and the Moon. Whatever you set here applies at once to those two views. The **Soleil** tab ignores it and stays on the computer's current date and time.
 
 - **Year**: 1000–2500.
 - **Month**: French names.
@@ -210,6 +226,18 @@ Same date and time as the planets, with a **single disk** as large as the frame 
 
 **Hover**: distance (km), diameter (′), illuminated %, phase, sub-Earth latitude.
 
+### Sun
+
+This tab **does not follow** the date used by the other views. It always shows the Sun for the **computer's current time**. It has no animation bar.
+
+On each launch the app downloads the NASA **SDO/HMI continuum** quick-look and keeps only the disk: the caption along the bottom of the photo is removed. The Sun has no phase, so the circle is always full. Its on-screen size follows the **true Earth–Sun distance** (slightly larger in early January, at perihelion, than in early July, at aphelion — about 3%).
+
+**Header**: title, computer time, image source, and the **Nord vers le bas** checkbox (a 180° turn; labels stay upright).
+
+**Under the disk**: name, diameter in **arcminutes** (′), distance in astronomical units.
+
+If the network is down, the last saved image is shown again. With no saved image, a plain fallback disk is drawn at the same scale.
+
 ### Animation
 
 At the bottom of **Planètes à l'échelle** and **Lune**, the **Animation** bar steps the shared date.
@@ -220,7 +248,7 @@ At the bottom of **Planètes à l'échelle** and **Lune**, the **Animation** bar
 - **Saut**: a count and a unit. Days 1–365, months 1–12, years 1–10.
 - Hour and minute stay put. A day that does not exist in the target month (31 January plus one month) lands on the last day of that month.
 - Playback stops at year 1000 and year 2500.
-- **Date et heure** has no bar, but it shows the moving instant. Switching tabs does not stop playback.
+- **Date et heure** and **Soleil** have no bar. The date tab shows the moving instant. The Sun tab keeps showing the computer's clock. Switching tabs does not stop playback.
 
 ### Optional images
 
@@ -241,7 +269,8 @@ After adding or changing a file, **change the time by one minute or click the vi
 
 - One instant at a time (no multi-date comparison).
 - No moons, comets, or asteroids.
-- Textures are static; no weather or evolving surface features.
+- Planet and Moon textures are static; no weather or evolving surface features.
+- The Sun picture is the latest SDO/HMI continuum available at launch (often a few minutes behind), not a reconstruction for a past date.
 - Lunar bump shading exaggerates slopes; it does not model deep crater shadowing.
 - Suited to amateur use (years 1000–2500), not professional mission planning.
 
@@ -250,8 +279,9 @@ After adding or changing a file, **change the time by one minute or click the vi
 1. Set **Date et heure** (or **Maintenant**).
 2. Open **Planètes à l'échelle** to compare sizes and phases.
 3. Open **Lune** for the Moon.
-4. Toggle **Nord vers le bas** to match your observing habit.
-5. In **Animation**, set the step, then press **Lecture**, **Reculer**, or **1 fois**.
+4. Open **Soleil** for the Sun as it is now, on the computer's clock.
+5. Toggle **Nord vers le bas** to match your observing habit.
+6. In **Animation**, set the step, then press **Lecture**, **Reculer**, or **1 fois**.
 
 ---
 

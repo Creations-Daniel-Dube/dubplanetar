@@ -1,4 +1,4 @@
-//! Réglage de l'instant utilisé par la vue des planètes.
+//! Réglage de l'instant utilisé par les planètes et la Lune.
 
 use chrono::{Datelike, Timelike};
 
@@ -20,7 +20,7 @@ impl Panel for DatePanel {
         ui.add_space(8.0);
         ui.heading("Date et heure");
         ui.add_space(6.0);
-        ui.label("L'instant choisi sert à la vue « Planètes à l'échelle ».");
+        ui.label("L'instant choisi sert aux planètes et à la Lune. Le Soleil suit l'heure de l'ordinateur.");
         ui.add_space(18.0);
 
         let mut year = observation.when.year();
