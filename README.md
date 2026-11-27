@@ -1,6 +1,6 @@
 # dubPlanetar — Planètes à l'échelle
 
-**Version 0.1.500 BETA**
+**Version 0.3.1070 BETA**
 
 Application de bureau pour visualiser les planètes et la Lune telles qu'elles apparaîtraient dans un télescope, à un instant donné, avec les vraies tailles angulaires et les phases d'éclairage.
 
