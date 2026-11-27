@@ -11,6 +11,8 @@ use crate::bodies::{self, Body};
 use crate::ephemeris::{self, Appearance};
 use crate::panel::Panel;
 use crate::raster_pump::{self, DiskJob, RasterPump};
+use crate::satellite_window::SatelliteWindow;
+use crate::satellites;
 use crate::state::{Observation, Viewpoint};
 
 const HEADER_H: f32 = 118.0;
@@ -24,6 +26,8 @@ pub struct PlanetsPanel {
     maps: HashMap<Body, StoredMap>,
     pump: RasterPump,
     requested: Option<Requested>,
+    moons: Option<Body>,
+    satellite_window: SatelliteWindow,
 }
 
 impl Default for PlanetsPanel {
@@ -33,6 +37,8 @@ impl Default for PlanetsPanel {
             maps: HashMap::new(),
             pump: RasterPump::new(),
             requested: None,
+            moons: None,
+            satellite_window: SatelliteWindow::new(),
         }
     }
 }
@@ -145,6 +151,7 @@ impl Panel for PlanetsPanel {
             observation.waiting_for_image = true;
             ui.ctx().request_repaint_after(Duration::from_millis(40));
         }
+        let mut opened = None;
         for (body, app, _, slot) in &specs {
             if let Some(cached) = self.cache.get(body) {
                 let [w, h] = cached.texture.size();
@@ -155,16 +162,30 @@ impl Panel for PlanetsPanel {
                 let image_rect = egui::Rect::from_center_size(center, display);
                 let response = ui.put(
                     image_rect,
-                    egui::Image::from_texture(&cached.texture).fit_to_exact_size(display),
+                    egui::Image::from_texture(&cached.texture)
+                        .fit_to_exact_size(display)
+                        .sense(egui::Sense::click()),
                 );
-                response.on_hover_text(tooltip(app));
+                let mut tip = tooltip(app);
+                if observation.viewpoint == Viewpoint::Earth && satellites::has_moons(*body) {
+                    tip.push_str("\nDouble-clic : satellites");
+                    if response.double_clicked() {
+                        opened = Some(*body);
+                    }
+                }
+                response.on_hover_text(tip);
             }
             paint_labels(&painter, slot, app);
+        }
+        if let Some(body) = opened {
+            self.moons = Some(body);
         }
         if busy {
             raster_pump::paint_busy(ui.painter(), content);
         }
         animation::bar(ui, observation, full);
+        self.satellite_window
+            .ui(ui.ctx(), observation, &mut self.moons);
     }
 }
 

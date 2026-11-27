@@ -8,6 +8,8 @@ mod moon_panel;
 mod panel;
 mod planets_panel;
 mod raster_pump;
+mod satellite_window;
+mod satellites;
 mod soleil_panel;
 mod state;
 mod sun_image;

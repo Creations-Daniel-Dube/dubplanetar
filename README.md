@@ -82,6 +82,24 @@ Cette vue imite une page de revue d'astronomie : **toutes les planètes du Syst�
 
 Passez la souris sur un disque pour un encadré détaillé : distance en unités astronomiques, diamètre, % éclairé, angle de phase, latitude sous l'observateur, orientation du pôle, angle du limbe éclairé.
 
+**Double-clic — satellites**
+
+Seulement quand **Vu depuis** est la Terre. Un double-clic sur Mars, Jupiter, Saturne, Uranus ou Neptune ouvre une fenêtre. Mercure et Vénus n'ont pas de satellites : le double-clic ne fait rien.
+
+La planète est dessinée comme dans la grille (phase, carte, anneaux de Saturne, axe bleu). Autour, les satellites les plus lumineux sont à leur place réelle, vue de la Terre :
+
+| Planète | Satellites |
+|---------|------------|
+| Mars | Phobos, Déimos |
+| Jupiter | Io, Europe, Ganymède, Callisto |
+| Saturne | Téthys, Dioné, Rhéa, Titan, Japet |
+| Uranus | Miranda, Ariel, Umbriel, Titania, Obéron |
+| Neptune | Triton (les autres sont trop faibles) |
+
+Le champ de départ contient l'orbite la plus large : les lunes sont alors des points, classés par magnitude. La molette zoome sans changer les écarts ni les diamètres. Dès qu'un satellite fait au moins trois pixels (surtout les lunes de Jupiter, et Titan), il devient un petit disque avec sa phase. Une lune derrière la planète, ou dans son ombre, disparaît. Sur Jupiter et Saturne, l'ombre de la lune est dessinée sur le disque quand elle tombe du côté visible. Au-delà de la magnitude 16, le point n'est plus tracé.
+
+La fenêtre suit la date et l'animation. La case **Nord vers le bas** est celle de l'écran. La croix ou Échap ferment la fenêtre. Changer **Vu depuis** la ferme aussi.
+
 ### Lune
 
 Même date et heure que les planètes, mais **un seul disque**, aussi grand que le cadre le permet. Une Lune de **35′** le remplit ; plus elle est loin, plus le disque rétrécit (super-Lune près du périgée, plus petite à l’apogée).
@@ -140,7 +158,8 @@ Après avoir ajouté ou remplacé une image, **changez de minute ou cliquez dans
 ### Limites connues (version bêta)
 
 - Un seul instant à la fois (pas de comparaison entre plusieurs dates).
-- Pas de satellites, comètes ni astéroïdes.
+- Pas de comètes ni d'astéroïdes. Les satellites montrés sont les plus lumineux de chaque planète ; Neptune n'affiche que Triton.
+- Leur place est celle d'un atlas amateur (environ une minute d'arc), pas une éphéméride de sonde.
 - Les photos des planètes et de la Lune sont des cartes fixes : pas de météo, pas de taches en évolution sur Jupiter, etc.
 - L'image du Soleil est le dernier continuum SDO/HMI disponible au lancement (souvent différé de quelques minutes), pas une reconstitution pour une date passée. Depuis une autre planète, cette photo ne tourne pas pour montrer l'hémisphère solaire qui lui fait face.
 - L'éclairage du relief lunaire accentue les pentes ; il ne calcule pas les ombres profondes dans les cratères.
@@ -229,6 +248,24 @@ All **major planets (Mercury to Neptune) at one instant**, on a **common scale i
 
 Tooltip on each disk: distance (AU), diameter, illuminated %, phase angle, sub-observer latitude, pole position angle, bright-limb angle.
 
+**Double-click — satellites**
+
+Only when **Vu depuis** is Earth. Double-click Mars, Jupiter, Saturn, Uranus, or Neptune to open a window. Mercury and Venus have no moons, so the double-click does nothing.
+
+The planet is drawn as on the grid (phase, map, Saturn's rings, blue axis). Around it, the brightest moons sit at their true places as seen from Earth:
+
+| Planet | Satellites |
+|--------|------------|
+| Mars | Phobos, Deimos |
+| Jupiter | Io, Europa, Ganymede, Callisto |
+| Saturn | Tethys, Dione, Rhea, Titan, Iapetus |
+| Uranus | Miranda, Ariel, Umbriel, Titania, Oberon |
+| Neptune | Triton (the others are too faint) |
+
+The opening field contains the widest orbit, so the moons are points ranked by magnitude. The scroll wheel zooms without changing separations or diameters. Once a moon is at least three pixels across (mainly Jupiter's moons, and Titan), it is drawn as a small disk with its phase. A moon behind the planet, or in its shadow, disappears. On Jupiter and Saturn the moon's shadow is drawn on the disk when it falls on the visible face. Fainter than magnitude 16, the point is not drawn.
+
+The window follows the date and the animation. It uses the same **Nord vers le bas** checkbox as the screen. The close box or Escape dismisses it. Changing **Vu depuis** closes it too.
+
 ### Moon
 
 Same date and time as the planets, with a **single disk** as large as the frame allows. A Moon of **35′** fills it; a more distant Moon is drawn smaller (a supermoon near perigee, a smaller one at apogee).
@@ -286,7 +323,8 @@ After adding or changing a file, **change the time by one minute or click the vi
 ### Known limits (beta)
 
 - One instant at a time (no multi-date comparison).
-- No moons, comets, or asteroids.
+- No comets or asteroids. The moons shown are the brightest of each planet; Neptune shows only Triton.
+- Their places are amateur-atlas accuracy (about one arcminute), not a spacecraft ephemeris.
 - Planet and Moon textures are static; no weather or evolving surface features.
 - The Sun picture is the latest SDO/HMI continuum available at launch (often a few minutes behind), not a reconstruction for a past date. From another planet, that photo does not rotate to the solar hemisphere facing that planet.
 - Lunar bump shading exaggerates slopes; it does not model deep crater shadowing.

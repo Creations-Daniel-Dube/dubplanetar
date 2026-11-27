@@ -327,7 +327,7 @@ fn equatorial_planet(body: Body, jd: f64) -> Vec3 {
     ecliptic_to_equatorial(Vec3::new(c.x, c.y, c.z))
 }
 
-fn heliocentric(body: Body, jd: f64) -> Vec3 {
+pub(crate) fn heliocentric(body: Body, jd: f64) -> Vec3 {
     if body == Body::Earth {
         equatorial_earth(jd)
     } else {
